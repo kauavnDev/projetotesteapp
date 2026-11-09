@@ -1,0 +1,11 @@
+node_modules
+.pnpm-store
+.env
+.env.local
+.env.*.local
+dist
+.next
+.expo
+*.log
+apps/mobile/android
+apps/mobile/ios
