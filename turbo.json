@@ -1,10 +1,21 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "ADMIN_EMAILS",
+    "BLOB_READ_WRITE_TOKEN"
+  ],
   "tasks": {
-    "dev": { "cache": false, "persistent": true },
-    "lint": {},
-    "typecheck": {},
-    "test": {},
-    "build": { "dependsOn": ["^build"], "outputs": [".next/**", "dist/**"] }
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**"],
+      "env": [
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "ADMIN_EMAILS",
+        "BLOB_READ_WRITE_TOKEN"
+      ]
+    }
   }
 }
