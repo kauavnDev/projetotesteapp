@@ -2,10 +2,10 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { RoutineSchema } from "@forge/shared";
 import { and, eq, inArray } from "drizzle-orm";
-import { db } from "../db/client";
-import { routines, routineTasks, routineCompletions } from "../db/schema";
-import { requireAuth } from "../middleware/auth";
-import { occursOn } from "../lib/schedules";
+import { db } from "../db/client.js";
+import { routines, routineTasks, routineCompletions } from "../db/schema.js";
+import { requireAuth } from "../middleware/auth.js";
+import { occursOn } from "../lib/schedules.js";
 
 export const routinesRoutes = new Hono<{ Variables: { user: { id: string } } }>();
 routinesRoutes.use("*", requireAuth);
