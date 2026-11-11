@@ -2,9 +2,9 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { SavingsEntrySchema, SavingsPlanSchema } from "@forge/shared";
 import { and, desc, eq, gte } from "drizzle-orm";
-import { db } from "../db/client";
-import { savingsEntries, savingsPlans } from "../db/schema";
-import { requireAuth } from "../middleware/auth";
+import { db } from "../db/client.js";
+import { savingsEntries, savingsPlans } from "../db/schema.js";
+import { requireAuth } from "../middleware/auth.js";
 
 export const savingsRoutes = new Hono<{ Variables: { user: { id: string } } }>();
 savingsRoutes.use("*", requireAuth);
