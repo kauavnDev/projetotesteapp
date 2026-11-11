@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "esbuild src/index.ts --bundle --platform=node --target=n ode20 --outfile=dist/index.js --format=esm",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --format=esm",
     "start": "node dist/index.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -23,12 +23,13 @@
     "jose": "^5.9.0",
     "zod": "^3.23.8"
   },
- "devDependencies": {
-  "@types/node": "^20.14.0",
-  "@types/bcryptjs": "^2.4.6",
-  "drizzle-kit": "^0.24.0",
-  "esbuild": "^0.23.0",
-  "tsx": "^4.19.0",
-  "typescript": "^5.5.4",
-  "vitest": "^2.1.0"
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/bcryptjs": "^2.4.6",
+    "drizzle-kit": "^0.24.0",
+    "esbuild": "^0.23.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.0"
   }
+}
