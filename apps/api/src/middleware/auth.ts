@@ -1,5 +1,5 @@
 import { createMiddleware } from "hono/factory";
-import { verifyAccessToken } from "../lib/jwt";
+import { verifyAccessToken } from "../lib/jwt.js";
 
 export type AuthUser = { id: string; email: string; role: "user" | "admin" };
 
