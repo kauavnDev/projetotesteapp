@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { authRoutes } from "./routes/auth";
-import { usersRoutes } from "./routes/users";
-import { savingsRoutes } from "./routes/savings";
-import { goalsRoutes } from "./routes/goals";
-import { routinesRoutes } from "./routes/routines";
-import { bodyRoutes } from "./routes/body";
-import { quotesRoutes } from "./routes/quotes";
-import { adminRoutes } from "./routes/admin";
+import { authRoutes } from "./routes/auth.js";
+import { usersRoutes } from "./routes/users.js";
+import { savingsRoutes } from "./routes/savings.js";
+import { goalsRoutes } from "./routes/goals.js";
+import { routinesRoutes } from "./routes/routines.js";
+import { bodyRoutes } from "./routes/body.js";
+import { quotesRoutes } from "./routes/quotes.js";
+import { adminRoutes } from "./routes/admin.js";
 
 const app = new Hono().basePath("/api/v1");
 
