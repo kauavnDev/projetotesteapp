@@ -3,10 +3,10 @@ import { zValidator } from "@hono/zod-validator";
 import { LoginSchema, RegisterSchema } from "@forge/shared";
 import { createHash } from "crypto";
 import { eq } from "drizzle-orm";
-import { db } from "../db/client";
-import { users, refreshTokens, userPreferences } from "../db/schema";
-import { hashPassword, verifyPassword } from "../lib/password";
-import { signAccessToken, signRefreshToken } from "../lib/jwt";
+import { db } from "../db/client.js";
+import { users, refreshTokens, userPreferences } from "../db/schema.js";
+import { hashPassword, verifyPassword } from "../lib/password.js";
+import { signAccessToken, signRefreshToken } from "../lib/jwt.js";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
