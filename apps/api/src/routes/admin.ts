@@ -2,9 +2,9 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { desc, eq } from "drizzle-orm";
-import { db } from "../db/client";
-import { quotes, users } from "../db/schema";
-import { requireAuth, requireAdmin } from "../middleware/auth";
+import { db } from "../db/client.js";
+import { quotes, users } from "../db/schema.js";
+import { requireAuth, requireAdmin } from "../middleware/auth.js";
 
 export const adminRoutes = new Hono<{ Variables: { user: { id: string; role: string } } }>();
 adminRoutes.use("*", requireAuth, requireAdmin);
