@@ -3,9 +3,9 @@ import { zValidator } from "@hono/zod-validator";
 import { BodyCheckinSchema } from "@forge/shared";
 import { desc, eq } from "drizzle-orm";
 import { put } from "@vercel/blob";
-import { db } from "../db/client";
-import { bodyCheckins } from "../db/schema";
-import { requireAuth } from "../middleware/auth";
+import { db } from "../db/client.js";
+import { bodyCheckins } from "../db/schema.js";
+import { requireAuth } from "../middleware/auth.js";
 
 export const bodyRoutes = new Hono<{ Variables: { user: { id: string } } }>();
 bodyRoutes.use("*", requireAuth);
