@@ -2,9 +2,9 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { GoalSchema } from "@forge/shared";
 import { and, desc, eq } from "drizzle-orm";
-import { db } from "../db/client";
-import { goals } from "../db/schema";
-import { requireAuth } from "../middleware/auth";
+import { db } from "../db/client.js";
+import { goals } from "../db/schema.js";
+import { requireAuth } from "../middleware/auth.js";
 
 export const goalsRoutes = new Hono<{ Variables: { user: { id: string } } }>();
 goalsRoutes.use("*", requireAuth);
