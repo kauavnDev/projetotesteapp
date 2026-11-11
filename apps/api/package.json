@@ -23,7 +23,7 @@
     "jose": "^5.9.0",
     "zod": "^3.23.8"
   },
-  "devDependencies": {
+ "devDependencies": {
   "@types/node": "^20.14.0",
   "@types/bcryptjs": "^2.4.6",
   "drizzle-kit": "^0.24.0",
