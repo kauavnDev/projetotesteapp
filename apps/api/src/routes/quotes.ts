@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { and, desc, eq, notInArray, sql } from "drizzle-orm";
-import { db } from "../db/client";
-import { quotes, userQuoteHistory } from "../db/schema";
-import { requireAuth } from "../middleware/auth";
+import { db } from "../db/client.js";
+import { quotes, userQuoteHistory } from "../db/schema.js";
+import { requireAuth } from "../middleware/auth.js";
 
 export const quotesRoutes = new Hono<{ Variables: { user: { id: string } } }>();
 quotesRoutes.use("*", requireAuth);
