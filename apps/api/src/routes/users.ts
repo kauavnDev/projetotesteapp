@@ -2,9 +2,9 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { PrefsSchema } from "@forge/shared";
 import { eq } from "drizzle-orm";
-import { db } from "../db/client";
-import { users, userPreferences, pushTokens } from "../db/schema";
-import { requireAuth } from "../middleware/auth";
+import { db } from "../db/client.js";
+import { users, userPreferences, pushTokens } from "../db/schema.js";
+import { requireAuth } from "../middleware/auth.js";
 
 export const usersRoutes = new Hono<{ Variables: { user: { id: string } } }>();
 usersRoutes.use("*", requireAuth);
