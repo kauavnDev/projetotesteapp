@@ -8,10 +8,9 @@
     "dev:web": "pnpm --filter @forge/web dev",
     "db:generate": "pnpm --filter @forge/api db:generate",
     "db:migrate": "pnpm --filter @forge/api db:migrate",
-    "db:seed": "pnpm --filter @forge/api db:seed",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
-    "test": "turbo run test"
+    "db:seed": "pnpm --filter @forge/api db:seed"
   },
-  "devDependencies": { "turbo": "^2.0.0" }
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  }
 }
