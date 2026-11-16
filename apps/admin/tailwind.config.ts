@@ -1,0 +1,1 @@
+import type { Config } from 'tailwindcss'; export default { content: ['./app/**/*.{ts,tsx}'], theme: { extend: { colors: { forge: { red: '#E11D48', orange: '#FB923C' } }, fontFamily: { sans: ['Inter','sans-serif'], display: ['Sora','sans-serif'] } } }, plugins: [] } satisfies Config;

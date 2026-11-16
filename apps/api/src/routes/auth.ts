@@ -1,67 +1,66 @@
 import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { LoginSchema, RegisterSchema } from "@forge/shared";
-import { createHash } from "crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { users, refreshTokens, userPreferences } from "../db/schema.js";
-import { hashPassword, verifyPassword } from "../lib/password.js";
-import { signAccessToken, signRefreshToken } from "../lib/jwt.js";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-
-async function issue(user: { id: string; email: string; role: "user" | "admin"; name: string; onboardingCompleted: boolean }) {
-  const accessToken = await signAccessToken({ sub: user.id, email: user.email, role: user.role });
-  const refreshToken = await signRefreshToken({ sub: user.id });
-  const tokenHash = createHash("sha256").update(refreshToken).digest("hex");
-  await db.insert(refreshTokens).values({
-    userId: user.id, tokenHash,
-    expiresAt: new Date(Date.now() + 30 * 86_400_000),
-  });
-  return { accessToken, refreshToken, user };
-}
+import { users, refreshTokens } from "../db/schema.js";
+import { hashPassword, verifyPassword, makeAccessToken, makeRefreshToken, hashToken, readRefreshToken, isAdminEmail } from "../lib/auth.js";
+import { registerSchema, loginSchema } from "@forge/shared";
+import { auth } from "../middleware/auth.js";
 
 export const authRoutes = new Hono();
-
-authRoutes.post("/register", zValidator("json", RegisterSchema), async (c) => {
-  const { email, password, name } = c.req.valid("json");
-  const dup = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  if (dup.length) return c.json({ error: { message: "E-mail jÃ¡ cadastrado", code: "email_taken" } }, 409);
-
-  const role: "user" | "admin" = ADMIN_EMAILS.includes(email.toLowerCase()) ? "admin" : "user";
-  const [user] = await db.insert(users).values({
-    email, name, role, passwordHash: await hashPassword(password),
-  }).returning();
-  await db.insert(userPreferences).values({ userId: user.id });
-  return c.json(await issue(user));
+// Per-instance limiter. Use Redis/KV for multi-instance production deployments.
+const loginAttempts = new Map<string,{count:number;resetAt:number}>();
+const loginKey = (c:any) => c.req.header("cf-connecting-ip") ?? c.req.header("x-real-ip") ?? "unknown";
+function recordFailure(key:string) {
+ const now=Date.now(), item=loginAttempts.get(key);
+ if(!item || item.resetAt<=now) loginAttempts.set(key,{count:1,resetAt:now+15*60*1000}); else item.count++;
+ for(const [k,v] of loginAttempts) if(v.resetAt<=now) loginAttempts.delete(k);
+}
+authRoutes.use("/login", async (c,next) => {
+ const item=loginAttempts.get(loginKey(c));
+ if(item && item.resetAt>Date.now() && item.count>=8) return c.json({error:{code:"RATE_LIMITED",message:"Muitas tentativas. Aguarde 15 minutos."}},429);
+ await next();
 });
-
-authRoutes.post("/login", zValidator("json", LoginSchema), async (c) => {
-  const { email, password } = c.req.valid("json");
-  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    return c.json({ error: { message: "Credenciais invÃ¡lidas", code: "invalid_credentials" } }, 401);
-  }
-  return c.json(await issue(user));
+const issue = async (u:any) => {
+  const accessToken = await makeAccessToken({id:u.id,email:u.email,role:u.role});
+  const refresh = await makeRefreshToken(u.id);
+  await db.insert(refreshTokens).values({userId:u.id,tokenHash:refresh.hash,expiresAt:refresh.expiresAt});
+  return {accessToken,refreshToken:refresh.token,user:{id:u.id,name:u.name,email:u.email,role:u.role,heightCm:u.heightCm,weightKg:u.weightKg}};
+};
+authRoutes.post("/register", async c => {
+  const body = registerSchema.parse(await c.req.json());
+  const existing = await db.select({id:users.id}).from(users).where(eq(users.email,body.email)).limit(1);
+  if (existing.length) return c.json({error:{code:"EMAIL_EXISTS",message:"Este e-mail já está cadastrado."}},409);
+  const [u] = await db.insert(users).values({name:body.name,email:body.email,passwordHash:await hashPassword(body.password),role:isAdminEmail(body.email)?"admin":"user"}).returning();
+  return c.json(await issue(u),201);
 });
-
-authRoutes.post("/refresh", async (c) => {
-  const { refreshToken } = await c.req.json().catch(() => ({}));
-  if (!refreshToken) return c.json({ error: { message: "Missing", code: "bad_request" } }, 400);
-  const tokenHash = createHash("sha256").update(refreshToken).digest("hex");
-  const [row] = await db.select().from(refreshTokens).where(eq(refreshTokens.tokenHash, tokenHash)).limit(1);
-  if (!row || row.expiresAt < new Date()) return c.json({ error: { message: "InvÃ¡lido", code: "unauthorized" } }, 401);
-  const [user] = await db.select().from(users).where(eq(users.id, row.userId)).limit(1);
-  if (!user) return c.json({ error: { message: "InvÃ¡lido", code: "unauthorized" } }, 401);
-  return c.json({ accessToken: await signAccessToken({ sub: user.id, email: user.email, role: user.role }) });
+authRoutes.post("/login", async c => {
+  const body = loginSchema.parse(await c.req.json());
+  const [u] = await db.select().from(users).where(eq(users.email,body.email)).limit(1);
+  if (!u || !u.active || !(await verifyPassword(body.password,u.passwordHash))) { recordFailure(loginKey(c)); return c.json({error:{code:"BAD_CREDENTIALS",message:"E-mail ou senha incorretos."}},401); }
+  loginAttempts.delete(loginKey(c));
+  const role = isAdminEmail(u.email) ? "admin" : "user";
+  if (role !== u.role) await db.update(users).set({role}).where(eq(users.id,u.id));
+  return c.json(await issue({...u,role}));
 });
-
-authRoutes.post("/logout", async (c) => {
-  const { refreshToken } = await c.req.json().catch(() => ({}));
-  if (refreshToken) {
-    const tokenHash = createHash("sha256").update(refreshToken).digest("hex");
-    await db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, tokenHash));
-  }
-  return c.json({ ok: true });
+authRoutes.post("/refresh", async c => {
+  const refreshBody=await c.req.json().catch(()=>({})),refreshToken=refreshBody?.refreshToken;
+  if (typeof refreshToken !== "string") return c.json({error:{code:"INVALID_REFRESH",message:"Token de renovação inválido."}},401);
+  let payload;
+  try { ({payload}=await readRefreshToken(refreshToken)); }
+  catch { return c.json({error:{code:"INVALID_REFRESH",message:"Sessão expirada. Entre novamente."}},401); }
+  if (!payload.sub) return c.json({error:{code:"INVALID_REFRESH",message:"Sessão expirada. Entre novamente."}},401);
+  const [stored] = await db.update(refreshTokens).set({revokedAt:new Date()}).where(and(eq(refreshTokens.tokenHash,hashToken(refreshToken)),eq(refreshTokens.userId,payload.sub),isNull(refreshTokens.revokedAt),gt(refreshTokens.expiresAt,new Date()))).returning();
+  if (!stored) return c.json({error:{code:"INVALID_REFRESH",message:"Sessão expirada. Entre novamente."}},401);
+  const [u] = await db.select().from(users).where(eq(users.id,stored.userId)).limit(1);
+  if (!u || !u.active) return c.json({error:{code:"INVALID_REFRESH",message:"Sessão expirada. Entre novamente."}},401);
+  return c.json(await issue({...u,role:isAdminEmail(u.email)?"admin":"user"}));
+});
+authRoutes.post("/logout", auth, async c => {
+  const logoutBody=await c.req.json().catch(()=>({}));const refreshToken=logoutBody?.refreshToken;
+  if (typeof refreshToken === "string") await db.update(refreshTokens).set({revokedAt:new Date()}).where(and(eq(refreshTokens.tokenHash,hashToken(refreshToken)),eq(refreshTokens.userId,c.get("user").id),isNull(refreshTokens.revokedAt)));
+  return c.json({ok:true});
+});
+authRoutes.get("/me", auth, async c => {
+  const [u] = await db.select({id:users.id,name:users.name,email:users.email,role:users.role,heightCm:users.heightCm,weightKg:users.weightKg}).from(users).where(eq(users.id,c.get("user").id)).limit(1);
+  return c.json({user:u});
 });

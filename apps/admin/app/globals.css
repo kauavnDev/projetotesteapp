@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:ital,wght@0,500;0,600;0,700;1,600;1,700&display=swap');
+@tailwind base; @tailwind components; @tailwind utilities;
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f4f4f5;font-family:Inter,sans-serif}
+.panel{background:linear-gradient(145deg,rgba(24,24,34,.96),rgba(15,15,23,.96));border:1px solid rgba(255,255,255,.08);border-radius:22px;box-shadow:0 18px 60px rgba(0,0,0,.22)}
+.gradient{background:linear-gradient(110deg,#e11d48,#fb923c);-webkit-background-clip:text;background-clip:text;color:transparent}
+.btn{border-radius:13px;padding:11px 16px;background:linear-gradient(110deg,#e11d48,#fb923c);font-weight:700;color:white}
+.field{width:100%;border-radius:12px;background:#11111a;border:1px solid #30303c;padding:12px;color:white;outline:none}
+
+.forge-shell.theme-light{background:#f8f7f8;color:#18181b}
+.theme-light .panel{background:linear-gradient(145deg,#fff,#f4f4f5);border-color:#e4e4e7;box-shadow:0 12px 35px rgba(24,24,27,.08)}
+.theme-light .text-zinc-400,.theme-light .text-zinc-500{color:#52525b!important}
+.theme-light .field{background:#fff;border-color:#d4d4d8;color:#18181b}
+.theme-light .bg-zinc-900\/70{background:#f4f4f5}
+.theme-light .border-white\/10,.theme-light .border-white\/5{border-color:#e4e4e7}
+
+@keyframes forge-gradient-shift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes forge-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}
+.quote-gradient{background:linear-gradient(120deg,rgba(225,29,72,.18),rgba(251,146,60,.16),rgba(225,29,72,.18));background-size:200% 200%;animation:forge-gradient-shift 7s ease infinite}
+.quote-pulse{animation:forge-pulse 2.5s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.quote-gradient,.quote-pulse{animation:none}}

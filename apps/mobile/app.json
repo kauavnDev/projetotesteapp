@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Forge",
+    "slug": "forge-o-seu-amanha",
+    "scheme": "forge",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permita que o Forge use a câmera para registrar sua evolução corporal."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "forge-reminders"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "android": {
+      "package": "com.forge.oseuamanha",
+      "permissions": [
+        "CAMERA",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.forge.oseuamanha",
+      "infoPlist": {
+        "NSCameraUsageDescription": "A câmera é usada para registrar fotos privadas da sua evolução."
+      }
+    }
+  }
+}

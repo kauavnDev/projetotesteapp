@@ -1,150 +1,71 @@
-import {
-  pgTable, uuid, text, integer, boolean, timestamp, jsonb, date,
-  index, uniqueIndex, pgEnum,
-} from "drizzle-orm/pg-core";
-
-export const roleEnum = pgEnum("role", ["user", "admin"]);
-export const freqEnum = pgEnum("freq", ["daily", "weekly", "monthly"]);
-export const goalCatEnum = pgEnum("goal_category", ["health", "money", "skill", "habit", "other"]);
-export const goalStatusEnum = pgEnum("goal_status", ["active", "completed", "archived"]);
-export const schedEnum = pgEnum("schedule_type", ["daily", "weekly", "monthly", "custom"]);
-export const platformEnum = pgEnum("platform", ["ios", "android", "web"]);
-export const themeEnum = pgEnum("theme_pref", ["light", "dark", "system"]);
-export const quoteFreqEnum = pgEnum("quote_freq", ["multiple_per_day", "daily", "weekly", "custom"]);
+import { pgTable, uuid, varchar, text, timestamp, integer, numeric, boolean, date, jsonb, uniqueIndex, index, AnyPgColumn } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name",{length:60}).notNull(),
+  email: varchar("email",{length:254}).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  name: text("name").notNull(),
-  role: roleEnum("role").notNull().default("user"),
-  timezone: text("timezone").notNull().default("America/Sao_Paulo"),
-  onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const refreshTokens = pgTable("refresh_tokens", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  tokenHash: text("token_hash").notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => ({ userIdx: index("refresh_user_idx").on(t.userId) }));
-
-export const userPreferences = pgTable("user_preferences", {
-  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
-  theme: themeEnum("theme").notNull().default("system"),
-  notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
-  widgetConfig: jsonb("widget_config").$type<{ quote: boolean; savings: boolean; routine: boolean }>()
-    .notNull().default({ quote: true, savings: true, routine: true }),
-  quoteFrequency: quoteFreqEnum("quote_frequency").notNull().default("daily"),
-  quoteTimesPerDay: integer("quote_times_per_day").notNull().default(1),
-  quoteDaysOfWeek: jsonb("quote_days_of_week").$type<number[]>().notNull().default([1,2,3,4,5,6,0]),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const savingsPlans = pgTable("savings_plans", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  amountCents: integer("amount_cents").notNull(),
-  frequency: freqEnum("frequency").notNull(),
+  role: varchar("role",{length:10}).notNull().default("user"),
+  heightCm: integer("height_cm"),
+  weightKg: numeric("weight_kg",{precision:5,scale:2}),
   active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => ({ userIdx: index("savings_plan_user_idx").on(t.userId) }));
-
+  createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+});
+export const habits = pgTable("habits", {
+  id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  title: varchar("title",{length:80}).notNull(), frequency: varchar("frequency",{length:12}).notNull(),
+  days: jsonb("days").$type<number[]>().notNull().default([]), time: varchar("time",{length:5}),
+  color: varchar("color",{length:7}).notNull(), active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+});
+export const habitLogs = pgTable("habit_logs", {
+  id: uuid("id").defaultRandom().primaryKey(), habitId: uuid("habit_id").references(()=>habits.id,{onDelete:"cascade"}).notNull(),
+  userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(), logDate: date("log_date").notNull(),
+  completed: boolean("completed").notNull().default(true), points: integer("points").notNull().default(10),
+  createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+}, t=>({dailyUnique: uniqueIndex("habit_logs_user_habit_day").on(t.userId,t.habitId,t.logDate)}));
 export const savingsEntries = pgTable("savings_entries", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  planId: uuid("plan_id").references(() => savingsPlans.id, { onDelete: "set null" }),
-  amountCents: integer("amount_cents").notNull(),
-  date: date("date").notNull(),
-  note: text("note"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => ({ userDateIdx: index("savings_entry_user_date_idx").on(t.userId, t.date) }));
-
+  id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  type: varchar("type",{length:12}).notNull(), amount: numeric("amount",{precision:12,scale:2}).notNull(),
+  reason: text("reason"), createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+});
 export const goals = pgTable("goals", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description"),
-  targetAmountCents: integer("target_amount_cents"),
-  targetDate: date("target_date"),
-  category: goalCatEnum("category").notNull().default("other"),
-  status: goalStatusEnum("status").notNull().default("active"),
-  progressPct: integer("progress_pct").notNull().default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => ({ userIdx: index("goal_user_idx").on(t.userId) }));
-
-export const routines = pgTable("routines", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description"),
-  scheduleType: schedEnum("schedule_type").notNull().default("daily"),
-  scheduleConfig: jsonb("schedule_config").$type<{ days?: number[]; dayOfMonth?: number; interval?: number; anchor?: string }>()
-    .notNull().default({}),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date"),
-  color: text("color").notNull().default("#E11D48"),
-  active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => ({ userIdx: index("routine_user_idx").on(t.userId) }));
-
-export const routineTasks = pgTable("routine_tasks", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  routineId: uuid("routine_id").notNull().references(() => routines.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  order: integer("order").notNull().default(0),
-  timeOfDay: text("time_of_day"),
-  durationMinutes: integer("duration_minutes"),
-}, (t) => ({ routineIdx: index("routine_task_routine_idx").on(t.routineId) }));
-
-export const routineCompletions = pgTable("routine_completions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  taskId: uuid("task_id").notNull().references(() => routineTasks.id, { onDelete: "cascade" }),
-  date: date("date").notNull(),
-  completed: boolean("completed").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => ({
-  uniq: uniqueIndex("routine_completions_unique").on(t.taskId, t.date),
-  userDateIdx: index("routine_comp_user_date_idx").on(t.userId, t.date),
-}));
-
-export const bodyCheckins = pgTable("body_checkins", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  date: date("date").notNull(),
-  weightGrams: integer("weight_grams"),
-  mood: integer("mood"),
-  energy: integer("energy"),
-  notes: text("notes"),
-  photoUrl: text("photo_url"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => ({ userDateIdx: index("body_user_date_idx").on(t.userId, t.date) }));
-
+  id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  title: varchar("title",{length:100}).notNull(), targetAmount: numeric("target_amount",{precision:12,scale:2}).notNull(),
+  deadline: date("deadline").notNull(), createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+});
+export const pointsLedger = pgTable("points_ledger", {
+  id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  source: varchar("source",{length:30}).notNull(), sourceId: uuid("source_id"), points: integer("points").notNull(),
+  createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+}, t=>({userIndex:index("points_ledger_user_id_idx").on(t.userId)}));
 export const quotes = pgTable("quotes", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  text: text("text").notNull(),
-  author: text("author"),
-  category: text("category"),
-  active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  id: uuid("id").defaultRandom().primaryKey(), text: varchar("text",{length:300}).notNull(), color: varchar("color",{length:7}).notNull(),
+  animation: varchar("animation",{length:12}).notNull(), author: varchar("author",{length:80}).notNull(),
+  active: boolean("active").notNull().default(true), createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
 });
-
-export const userQuoteHistory = pgTable("user_quote_history", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  quoteId: uuid("quote_id").notNull().references(() => quotes.id, { onDelete: "cascade" }),
-  shownAt: timestamp("shown_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => ({ userShownIdx: index("uqh_user_shown_idx").on(t.userId, t.shownAt) }));
-
-export const pushTokens = pgTable("push_tokens", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  token: text("token").notNull().unique(),
-  platform: platformEnum("platform").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+export const bodyPhotos = pgTable("body_photos", {
+  id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  view: varchar("view",{length:12}).notNull(), storageKey: text("storage_key").notNull().unique(), mimeType: varchar("mime_type",{length:40}).notNull().default("image/jpeg"), fileSize: integer("file_size").notNull().default(0), takenAt: timestamp("taken_at",{withTimezone:true}).defaultNow().notNull()
+}, t=>({userTakenIndex:index("body_photos_user_taken_idx").on(t.userId,t.takenAt)}));
+export const bodyAnalyses = pgTable("body_analyses", {
+  id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  photoIds: jsonb("photo_ids").$type<string[]>().notNull(), summary: text("summary").notNull(),
+  disclaimer: text("disclaimer").notNull(), consentAt: timestamp("consent_at",{withTimezone:true}).notNull().defaultNow(), createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
 });
+export const alarms = pgTable("alarms", {
+  id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  parentAlarmId: uuid("parent_alarm_id").references(():AnyPgColumn=>alarms.id,{onDelete:"cascade"}), habitId: uuid("habit_id").references(()=>habits.id,{onDelete:"set null"}), time: varchar("time",{length:5}).notNull(), days: jsonb("days").$type<number[]>().notNull().default([]),
+  enabled: boolean("enabled").notNull().default(true), overrideDate: date("override_date")
+}, t=>({overrideUnique:uniqueIndex("alarms_parent_override_unique").on(t.parentAlarmId,t.overrideDate)}));
+export const refreshTokens = pgTable("refresh_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  tokenHash: text("token_hash").notNull(), expiresAt: timestamp("expires_at",{withTimezone:true}).notNull(),
+  revokedAt: timestamp("revoked_at",{withTimezone:true}), createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+}, t=>({userIndex:index("refresh_tokens_user_id_idx").on(t.userId)}));
+
+export const mindEntries = pgTable("mind_entries", {
+  id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  mood: integer("mood").notNull(), content: text("content").notNull(), createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+}, t=>({userCreatedIndex:index("mind_entries_user_created_idx").on(t.userId,t.createdAt)}));
