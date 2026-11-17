@@ -41,5 +41,7 @@ test('Codespaces ports stay private and setup targets the tested branch',async()
  assert.ok(readme.includes('forge/qa-foundation-2026-11-17'));
  assert.ok(readme.includes('Não escolha `main` ainda'));
  const init=await read('scripts/codespaces-init.mjs');
- assert.ok(init.includes('??\"\"'));\n const apiEnv=await read('apps/api/.env.example');\n assert.match(apiEnv,/^ADMIN_EMAILS=$/m);
+ assert.ok(init.includes('??""'));
+ const apiEnv=await read('apps/api/.env.example');
+ assert.match(apiEnv,/^ADMIN_EMAILS=$/m);
 });
