@@ -45,5 +45,5 @@ console.log("\nConfiguração local do Forge preparada.");
 console.log(`API para o celular: ${apiUrl}`);
 console.log(`Painel web: ${adminOrigin}`);
 console.log("ATENÇÃO: apps/api/.env usa e-mails de exemplo por padrão. Substitua ADMIN_EMAILS pelos dois e-mails corretos antes de criar as contas.");
-console.log("A porta 8787 fica pública apenas para permitir que o Android alcance a API no Codespaces. Use somente dados fictícios neste ambiente.");
+console.log("Para conectar o Android, torne as portas 8787 e 8081 públicas apenas durante o teste; depois volte para Private. Use somente dados fictícios.");
 if(!codespace||!domain)console.log("Codespaces não detectado: ajuste EXPO_PUBLIC_API_URL e NEXT_PUBLIC_API_URL manualmente para o endereço real da API.");

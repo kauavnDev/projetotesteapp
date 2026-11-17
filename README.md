@@ -20,8 +20,8 @@ O repositório inclui um Dev Container para abrir o projeto no GitHub Codespaces
 3. Aguarde a preparação do Dev Container. Ele instala pnpm/dependências e inicia um PostgreSQL 16 local no Codespace.
 4. O script scripts/codespaces-init.mjs cria arquivos locais ignorados pelo Git e configura a URL encaminhada da API para o Android.
 5. Abra a aba **Ports** do Codespaces e confira:
-   - 8787 — API, temporariamente pública para o Android alcançar o servidor.
-   - 8081 — Expo Metro, pública para a conexão do Expo Go.
+   - 8787 — API, privada por padrão. Mude para **Public** somente durante o teste no Android.
+   - 8081 — Expo Metro, privada por padrão. Mude para **Public** enquanto o Expo Go precisar conectar.
    - 3000 — painel web, privada.
 6. **Antes de criar contas**, edite apps/api/.env e substitua ADMIN_EMAILS pelos dois e-mails que terão acesso administrativo. O script usa e-mails de exemplo quando nenhum valor é fornecido.
 7. No terminal do Codespace, aplique a migração e inicie os serviços em terminais separados:
@@ -52,7 +52,7 @@ Se o QR code não conectar ao celular, tente iniciar o Expo com pnpm --filter @f
 
 **Compatibilidade Expo Go:** o projeto usa SDK 51. O Expo Go atual pode não aceitar essa versão antiga. Consulte [expo.dev/go](https://expo.dev/go) e selecione uma versão compatível com SDK 51, se ainda estiver disponível. Se não estiver, será necessário gerar um development/preview build com EAS; isso exige uma conta Expo e ainda não foi configurado nem testado neste projeto. Não atualize o SDK às pressas: a migração de versão precisa ser feita e validada separadamente.
 
-**Segurança do Codespaces:** a porta pública da API é necessária para o Android acessar o servidor. Use apenas dados fictícios, fotos de teste e um Codespace temporário. Não coloque fotos pessoais ou credenciais reais nesse ambiente. Ao terminar, pare o Codespace e torne a porta privada/remova o encaminhamento público.
+**Segurança do Codespaces:** as portas 8787 e 8081 começam privadas. Torne-as públicas somente durante a conexão do Android/Expo Go e volte para Private ao terminar. Use apenas dados fictícios, fotos de teste e um Codespace temporário; não coloque fotos pessoais ou credenciais reais nesse ambiente.
 
 ## Requisitos para desenvolvimento local
 
