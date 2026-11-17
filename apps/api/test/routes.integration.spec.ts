@@ -127,6 +127,16 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     expect((await afterDelete.json()).length).toBe(0);
   });
 
+  it("creates a starter library of rotating shared motivational quotes", async () => {
+    const response = await app.request("/v1/quotes/today", { headers: { Authorization: `Bearer ${owner.accessToken}` } });
+    expect(response.status).toBe(200);
+    const quote = await response.json();
+    expect(quote.text.length).toBeGreaterThan(10);
+    const { quotes } = await import("../src/db/schema.js");
+    const seeded = await db.select().from(quotes);
+    expect(seeded.length).toBeGreaterThanOrEqual(30);
+  });
+
   it("keeps finance transactions private and supports create, summary, edit and delete", async () => {
     const month = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit" }).format(new Date());
     const date = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
@@ -136,6 +146,8 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     const expense = await app.request("/v1/finance", { method: "POST", headers, body: JSON.stringify({ type: "expense", amount: 100, category: "Alimentação", description: "Mercado", occurredAt: date }) });
     expect(expense.status).toBe(201);
     const expenseRow = await expense.json();
+    const invalidMonth = await app.request("/v1/finance?month=2026-13", { headers });
+    expect(invalidMonth.status).toBe(400);
     const summary = await app.request(`/v1/finance?month=${month}`, { headers });
     const summaryBody = await summary.json();
     expect(summaryBody.income).toBe(3000);
@@ -144,6 +156,8 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     expect(summaryBody.categories).toEqual([{ category: "Alimentação", amount: 100 }]);
     const strangerSummary = await app.request(`/v1/finance?month=${month}`, { headers: { Authorization: `Bearer ${stranger.accessToken}` } });
     expect((await strangerSummary.json()).transactions).toHaveLength(0);
+    const foreignEdit = await app.request(`/v1/finance/${expenseRow.id}`, { method: "PATCH", headers: { Authorization: `Bearer ${stranger.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ amount: 1 }) });
+    expect(foreignEdit.status).toBe(404);
     const edit = await app.request(`/v1/finance/${expenseRow.id}`, { method: "PATCH", headers, body: JSON.stringify({ amount: 125, description: "Compra atualizada" }) });
     expect(edit.status).toBe(200);
     const updated = await edit.json();
