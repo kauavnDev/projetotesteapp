@@ -13,7 +13,7 @@ Aplicativo pessoal em português do Brasil para acompanhar **Rotina, Dinheiro, C
 
 ## Testar usando somente Android
 
-O repositório inclui um Dev Container para abrir o projeto no GitHub Codespaces, sem instalar Node ou PostgreSQL no celular.
+O repositório inclui um Dev Container para abrir o projeto no GitHub Codespaces, sem instalar Node ou PostgreSQL no celular. **Controle de custo:** em contas pessoais GitHub Free, a documentação atual informa 120 horas-core e 15 GB-mês incluídos; o consumo depende do tamanho da máquina e do tempo ativo. Escolha a máquina de 2 núcleos, pare o Codespace quando terminar e não adicione forma de pagamento nem aumente limite de gastos. Sem forma de pagamento, o GitHub bloqueia o uso que ultrapassa a cota incluída. Consulte [a cota e cobrança do Codespaces](https://docs.github.com/en/billing/concepts/product-billing/github-codespaces).
 
 1. Abra [o repositório Forge](https://github.com/kauavnDev/projetotesteapp) no Chrome.
 2. No botão **Code**, abra **Codespaces** e crie um Codespace na branch `forge/qa-foundation-2026-11-17` (a branch da PR #1). **Não escolha `main` ainda**: a configuração de Codespaces e o lockfile estão nessa branch e a PR ainda não foi mesclada.
