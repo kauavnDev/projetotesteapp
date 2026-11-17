@@ -127,6 +127,35 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     expect((await afterDelete.json()).length).toBe(0);
   });
 
+  it("limits the leaderboard to accepted friends and handles invitation lifecycle", async () => {
+    const outsider = await register("outsider");
+    const ownerHeaders = { Authorization: `Bearer ${owner.accessToken}`, "Content-Type": "application/json" };
+    const selfInvite = await app.request("/v1/friends/invite", { method: "POST", headers: ownerHeaders, body: JSON.stringify({ email: owner.user.email }) });
+    expect(selfInvite.status).toBe(400);
+    const invite = await app.request("/v1/friends/invite", { method: "POST", headers: ownerHeaders, body: JSON.stringify({ email: stranger.user.email }) });
+    expect(invite.status).toBe(201);
+    const inviteBody = await invite.json();
+    const ownerFriends = await app.request("/v1/friends", { headers: ownerHeaders });
+    expect((await ownerFriends.json()).outgoing).toHaveLength(1);
+    const strangerFriends = await app.request("/v1/friends", { headers: { Authorization: `Bearer ${stranger.accessToken}` } });
+    const incoming = (await strangerFriends.json()).incoming;
+    expect(incoming).toHaveLength(1);
+    expect(incoming[0].requestId).toBe(inviteBody.requestId);
+    const accept = await app.request(`/v1/friends/requests/${inviteBody.requestId}`, { method: "PATCH", headers: { Authorization: `Bearer ${stranger.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "accept" }) });
+    expect(accept.status).toBe(200);
+    const friendsAfterAccept = await app.request("/v1/friends", { headers: ownerHeaders });
+    expect((await friendsAfterAccept.json()).friends).toHaveLength(1);
+    const ranking = await app.request("/v1/leaderboard", { headers: ownerHeaders });
+    const rankingRows = await ranking.json();
+    expect(rankingRows.map((x:any)=>x.id).sort()).toEqual([owner.user.id,stranger.user.id].sort());
+    expect(rankingRows.some((x:any)=>x.id===outsider.user.id)).toBe(false);
+    const requestId = (await friendsAfterAccept.json()).friends[0].requestId;
+    const remove = await app.request(`/v1/friends/${requestId}`, { method: "DELETE", headers: ownerHeaders });
+    expect(remove.status).toBe(200);
+    const rankingAfterRemove = await app.request("/v1/leaderboard", { headers: ownerHeaders });
+    expect((await rankingAfterRemove.json()).map((x:any)=>x.id)).toEqual([owner.user.id]);
+  });
+
   it("creates a starter library of rotating shared motivational quotes", async () => {
     const response = await app.request("/v1/quotes/today", { headers: { Authorization: `Bearer ${owner.accessToken}` } });
     expect(response.status).toBe(200);
