@@ -16,14 +16,16 @@ export default function Alarms(){
   for(const n of existing)if((n.content.data as any)?.forgeAlarmId)await Notifications.cancelScheduledNotificationAsync(n.identifier);
   const overrides=rows.filter(a=>a.parentAlarmId&&a.overrideDate);
   const makeTrigger=(date:Date)=>date;
-  for(const alarm of rows.filter(a=>a.enabled&&!a.overrideDate&&!a.parentAlarmId)){
-   // Schedule concrete dates for the next 30 days so a one-day exception replaces, rather than duplicates, the recurring reminder.
+  for(const alarm of rows.filter(a=>!a.overrideDate&&!a.parentAlarmId)){
+   if(!alarm.enabled)continue;
+   // Check the exception before the recurring weekday: an override may intentionally move
+   // a reminder to a day on which the base alarm does not normally run.
    for(let offset=0;offset<30;offset++){
     const date=new Date();date.setDate(date.getDate()+offset);date.setSeconds(0,0);
-    if(alarm.days?.length&&!alarm.days.includes(date.getDay()))continue;
     const dateKey=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
     const exception=overrides.find(o=>o.parentAlarmId===alarm.id&&o.overrideDate===dateKey);
     if(exception&&!exception.enabled)continue;
+    if(!exception&&alarm.days?.length&&!alarm.days.includes(date.getDay()))continue;
     const chosen=exception??alarm;date.setHours(Number(chosen.time.slice(0,2)),Number(chosen.time.slice(3,5)),0,0);
     if(date.getTime()<=Date.now())continue;
     await Notifications.scheduleNotificationAsync({content:{title:"Forge · hora de agir",body:"Um pequeno passo hoje constrói o seu amanhã.",data:{forgeAlarmId:chosen.id}},trigger:makeTrigger(date)});
