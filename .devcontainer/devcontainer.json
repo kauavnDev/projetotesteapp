@@ -19,7 +19,7 @@
     "8081": {
       "label": "Expo Metro",
       "onAutoForward": "notify",
-      "visibility": "public"
+      "visibility": "private"
     }
   },
   "postCreateCommand": "corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --frozen-lockfile && pnpm --filter @forge/shared build && node scripts/codespaces-init.mjs"
