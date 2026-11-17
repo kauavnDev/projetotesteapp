@@ -56,8 +56,8 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
   });
 
   afterAll(async () => {
-    if (userIds.length) await db.delete(users).where(inArray(users.id, userIds));
-    await pool.end();
+    if (userIds.length && db && users) await db.delete(users).where(inArray(users.id, userIds));
+    if (pool) await pool.end();
     if (privateDir) await rm(privateDir, { recursive: true, force: true });
   });
 
