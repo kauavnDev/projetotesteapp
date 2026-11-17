@@ -23,7 +23,7 @@ O repositório inclui um Dev Container para abrir o projeto no GitHub Codespaces
    - 8787 — API, privada por padrão. Mude para **Public** somente durante o teste no Android.
    - 8081 — Expo Metro, privada por padrão. Mude para **Public** enquanto o Expo Go precisar conectar.
    - 3000 — painel web, privada.
-6. **Antes de criar contas**, edite apps/api/.env e substitua ADMIN_EMAILS pelos dois e-mails que terão acesso administrativo. O script usa e-mails de exemplo quando nenhum valor é fornecido.
+6. **Antes de criar contas administrativas**, edite apps/api/.env e informe os dois e-mails que terão acesso administrativo. Por segurança, ADMIN_EMAILS começa vazio e nenhum usuário recebe acesso admin até você configurar exatamente dois endereços válidos e distintos.
 7. No terminal do Codespace, aplique a migração e inicie os serviços em terminais separados:
 
 ~~~bash
