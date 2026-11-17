@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Hono } from "hono";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +13,7 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
   let db: typeof import("../src/db/client.js").db;
   let pool: typeof import("../src/db/client.js").pool;
   let users: typeof import("../src/db/schema.js").users;
+  let bodyAnalyses: typeof import("../src/db/schema.js").bodyAnalyses;
   let owner: any;
   let stranger: any;
   let privateDir = "";
@@ -56,6 +57,7 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     db = dbModule.db;
     pool = dbModule.pool;
     users = schema.users;
+    bodyAnalyses = schema.bodyAnalyses;
     app = new Hono();
     app.route("/v1/auth", authModule.authRoutes);
     app.route("/v1", coreModule.coreRoutes);
@@ -182,11 +184,20 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
       else process.env.OPENAI_API_KEY = previousKey;
     }
 
+    await db.insert(bodyAnalyses).values({
+      userId: owner.user.id,
+      photoIds: [photo.id],
+      summary: "Resumo sintético de teste.",
+      disclaimer: "Análise não médica.",
+      consentAt: new Date()
+    });
     const deletePhoto = await app.request(`/v1/body/photos/${photo.id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${owner.accessToken}` }
     });
     expect(deletePhoto.status).toBe(200);
+    const retainedAnalyses = await db.select().from(bodyAnalyses).where(eq(bodyAnalyses.userId, owner.user.id));
+    expect(retainedAnalyses).toHaveLength(0);
     const missing = await app.request(`/v1/body/photos/${photo.id}/file`, {
       headers: { Authorization: `Bearer ${owner.accessToken}` }
     });
