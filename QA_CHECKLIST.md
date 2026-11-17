@@ -6,8 +6,8 @@
 - [x] 7 testes Node de contrato passaram.
 - [x] 11 verificações estáticas passaram.
 - [x] Snapshot Drizzle gerado e drift check sem migração adicional.
-- [x] Migração baseline aplicada em PostgreSQL 16 limpo.
-- [x] 13 testes Vitest passaram, incluindo integração de unicidade diária.
+- [x] Migrações 0000 e 0001 aplicadas em PostgreSQL 16 limpo.
+- [x] 22 testes Vitest passaram em 4 arquivos, incluindo CRUD/isolamento financeiro e seed de frases.
 - [x] TypeScript passou nos workspaces.
 - [x] Build esbuild da API e build Next.js do painel passaram.
 - [ ] Build nativo Expo/APK e teste em Android físico.
@@ -46,8 +46,8 @@
 
 ## Finanças, cofrinho e metas
 
-- [ ] Entradas e despesas por categoria, resumo mensal, saldo e histórico editável no mobile e web.
-- [ ] Isolamento de transações entre usuários; CRUD e validação de centavos.
+- [x] Entradas e despesas por categoria, resumo mensal, saldo e histórico editável no mobile e web (CI e typecheck; falta QA visual Android).
+- [x] Isolamento de transações entre usuários; CRUD e validação de centavos (testes de integração).
 - [ ] Depósitos e retiradas com centavos, motivo detalhado obrigatório e saldo não negativo.
 - [ ] Editar/excluir lançamentos recalcula saldo e pontos.
 - [ ] Operações concorrentes não geram saldo negativo.
