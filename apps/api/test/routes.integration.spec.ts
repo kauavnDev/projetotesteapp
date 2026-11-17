@@ -157,6 +157,22 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     expect((await rankingAfterRemove.json()).map((x:any)=>x.id)).toEqual([owner.user.id]);
   });
 
+  it("persists the motivation-on-open preference per account", async () => {
+    const headers = { Authorization: `Bearer ${owner.accessToken}`, "Content-Type": "application/json" };
+    const initial = await app.request("/v1/preferences", { headers });
+    expect(initial.status).toBe(200);
+    expect((await initial.json()).showMotivationOnOpen).toBe(true);
+    const update = await app.request("/v1/preferences", { method: "PATCH", headers, body: JSON.stringify({ showMotivationOnOpen: false }) });
+    expect(update.status).toBe(200);
+    expect((await update.json()).showMotivationOnOpen).toBe(false);
+    const persisted = await app.request("/v1/preferences", { headers });
+    expect((await persisted.json()).showMotivationOnOpen).toBe(false);
+    const stranger = await app.request("/v1/preferences", { headers: { Authorization: `Bearer ${stranger.accessToken}` } });
+    expect((await stranger.json()).showMotivationOnOpen).toBe(true);
+    const invalid = await app.request("/v1/preferences", { method: "PATCH", headers, body: JSON.stringify({ showMotivationOnOpen: "false" }) });
+    expect(invalid.status).toBe(400);
+  });
+
   it("creates a starter library of rotating shared motivational quotes", async () => {
     const response = await app.request("/v1/quotes/today", { headers: { Authorization: `Bearer ${owner.accessToken}` } });
     expect(response.status).toBe(200);
