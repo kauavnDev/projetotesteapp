@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS finance_transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  type varchar(10) NOT NULL CHECK (type IN ('income','expense')),
-  amount numeric(12,2) NOT NULL CHECK (amount > 0),
+  type varchar(10) NOT NULL,
+  amount numeric(12,2) NOT NULL,
   category varchar(40) NOT NULL,
   description varchar(240),
   occurred_at date NOT NULL,
