@@ -68,7 +68,7 @@
 - [ ] CRUD do diário e isolamento entre usuários.
 - [ ] Login web, refresh token e logout.
 - [ ] Painel usuário em celular/desktop.
-- [ ] Edição/exclusão web de hábitos, poupança, metas e diário.
+- [ ] Edição/exclusão web de hábitos, finanças, poupança, metas e diário.\n- [ ] Rotação diária das frases motivacionais e CRUD administrativo.
 - [ ] Timeline de fotos e alarmes na interface web.
 - [ ] Admin: allowlist de exatamente dois e-mails, CRUD de frases, usuários e métricas.
 - [ ] Usuário comum recebe 403 em todas as rotas admin; contas desativadas perdem acesso.
