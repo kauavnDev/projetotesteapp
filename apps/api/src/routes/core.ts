@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { habits, habitLogs, savingsEntries, goals, pointsLedger, quotes, alarms, users, mindEntries } from "../db/schema.js";
+import { habits, habitLogs, savingsEntries, goals, pointsLedger, quotes, alarms, users, mindEntries, financeTransactions } from "../db/schema.js";
 import { auth, adminOnly } from "../middleware/auth.js";
-import { habitSchema, habitCreateSchema, savingsSchema, goalSchema, quoteSchema, alarmSchema, mindEntrySchema, calculateSavingsPoints, isHabitScheduledOnDate } from "@forge/shared";
+import { habitSchema, habitCreateSchema, savingsSchema, goalSchema, quoteSchema, alarmSchema, mindEntrySchema, calculateSavingsPoints, isHabitScheduledOnDate, financeTransactionSchema } from "@forge/shared";
 
 export const coreRoutes = new Hono();
 async function syncSavingsPoints(executor:any,userId:string) {
@@ -151,6 +151,34 @@ async function validateAlarmLinks(userId:string,b:any){
 coreRoutes.post("/alarms",async c=>{const b=alarmSchema.parse(await c.req.json()),uid=c.get("user").id;if(Boolean(b.parentAlarmId)!==Boolean(b.overrideDate))return c.json({error:{code:"INVALID_OVERRIDE",message:"Uma exceção precisa ter alarme base e data definidos."}},400);if(!await validateAlarmLinks(uid,b))return c.json({error:{code:"INVALID_ALARM_LINK",message:"O hábito ou alarme de referência não pertence à sua conta."}},400);const [r]=await db.insert(alarms).values({...b,userId:uid,overrideDate:b.overrideDate??null,parentAlarmId:b.parentAlarmId??null,habitId:b.habitId??null}).returning();return c.json(r,201);});
 coreRoutes.patch("/alarms/:id",async c=>{const b=alarmSchema.partial().parse(await c.req.json()),uid=c.get("user").id;if(!Object.keys(b).length)return c.json({error:{code:"EMPTY_UPDATE",message:"Informe ao menos um campo."}},400);const [old]=await db.select().from(alarms).where(and(eq(alarms.id,c.req.param("id")),eq(alarms.userId,uid))).limit(1);if(!old)return c.json({error:{code:"NOT_FOUND",message:"Alarme não encontrado."}},404);const merged={...old,...b};if(Boolean(merged.parentAlarmId)!==Boolean(merged.overrideDate))return c.json({error:{code:"INVALID_OVERRIDE",message:"Uma exceção precisa ter alarme base e data definidos."}},400);if(!await validateAlarmLinks(uid,merged))return c.json({error:{code:"INVALID_ALARM_LINK",message:"O hábito ou alarme de referência não pertence à sua conta."}},400);const [r]=await db.update(alarms).set(b).where(and(eq(alarms.id,c.req.param("id")),eq(alarms.userId,uid))).returning();return c.json(r);});
 coreRoutes.delete("/alarms/:id",async c=>{const uid=c.get("user").id,id=c.req.param("id");await db.delete(alarms).where(and(eq(alarms.id,id),eq(alarms.userId,uid)));await db.delete(alarms).where(and(eq(alarms.parentAlarmId,id),eq(alarms.userId,uid)));return c.json({ok:true});});
+
+
+const financeMonth=(value:string|undefined)=>{
+ const month=value??new Intl.DateTimeFormat("en-CA",{timeZone:process.env.APP_TIME_ZONE??"America/Sao_Paulo",year:"numeric",month:"2-digit"}).format(new Date()).slice(0,7);
+ if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))return null;
+ return {month,start:`${month}-01`,end:`${month}-31`};
+};
+coreRoutes.get("/finance",async c=>{
+ const period=financeMonth(c.req.query("month"));if(!period)return c.json({error:{code:"INVALID_MONTH",message:"Informe o mês no formato AAAA-MM."}},400);
+ const rows=await db.select().from(financeTransactions).where(and(eq(financeTransactions.userId,c.get("user").id),gte(financeTransactions.occurredAt,period.start),sql`${financeTransactions.occurredAt} <= ${period.end}`)).orderBy(desc(financeTransactions.occurredAt),desc(financeTransactions.createdAt));
+ const income=rows.filter(x=>x.type==="income").reduce((s,x)=>s+Number(x.amount),0),expense=rows.filter(x=>x.type==="expense").reduce((s,x)=>s+Number(x.amount),0);
+ const categories=Object.values(rows.reduce((acc:any,x)=>{if(x.type==="expense")acc[x.category]=(acc[x.category]??0)+Number(x.amount);return acc;},{})).map((amount:any,i)=>({category:Object.keys(rows.filter(x=>x.type==="expense").reduce((acc:any,x)=>{acc[x.category]=(acc[x.category]??0)+Number(x.amount);return acc;},{}))[i],amount}));
+ return c.json({month:period.month,income:Number(income.toFixed(2)),expenses:Number(expense.toFixed(2)),balance:Number((income-expense).toFixed(2)),transactions:rows,categories});
+});
+coreRoutes.post("/finance",async c=>{
+ const b=financeTransactionSchema.parse(await c.req.json());
+ const [row]=await db.insert(financeTransactions).values({...b,userId:c.get("user").id,amount:b.amount.toFixed(2),description:b.description||null}).returning();
+ return c.json(row,201);
+});
+coreRoutes.patch("/finance/:id",async c=>{
+ const b=financeTransactionSchema.partial().parse(await c.req.json());if(!Object.keys(b).length)return c.json({error:{code:"EMPTY_UPDATE",message:"Informe ao menos um campo."}},400);
+ const [row]=await db.update(financeTransactions).set({...b,amount:b.amount===undefined?undefined:b.amount.toFixed(2),description:b.description===undefined?undefined:(b.description||null)}).where(and(eq(financeTransactions.id,c.req.param("id")),eq(financeTransactions.userId,c.get("user").id))).returning();
+ return row?c.json(row):c.json({error:{code:"NOT_FOUND",message:"Lançamento não encontrado."}},404);
+});
+coreRoutes.delete("/finance/:id",async c=>{
+ const [row]=await db.delete(financeTransactions).where(and(eq(financeTransactions.id,c.req.param("id")),eq(financeTransactions.userId,c.get("user").id))).returning({id:financeTransactions.id});
+ return row?c.json({ok:true}):c.json({error:{code:"NOT_FOUND",message:"Lançamento não encontrado."}},404);
+});
 
 coreRoutes.get("/admin/users",adminOnly,async c=>c.json(await db.select({id:users.id,name:users.name,email:users.email,role:users.role,active:users.active,createdAt:users.createdAt}).from(users).orderBy(desc(users.createdAt))));
 coreRoutes.patch("/admin/users/:id",adminOnly,async c=>{
