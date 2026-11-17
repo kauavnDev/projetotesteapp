@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { chmod, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -45,6 +45,12 @@ bodyRoutes.get("/photos/:id/file",async c=>{
 bodyRoutes.delete("/photos/:id",async c=>{
  const [photo]=await db.select().from(bodyPhotos).where(and(eq(bodyPhotos.id,c.req.param("id")),eq(bodyPhotos.userId,c.get("user").id))).limit(1);
  if(!photo)return c.json({error:{code:"NOT_FOUND",message:"Foto não encontrada."}},404);
+ // A photo deletion also removes AI summaries derived from it, so deleted images
+ // are not indirectly retained through their analysis history.
+ await db.delete(bodyAnalyses).where(and(
+  eq(bodyAnalyses.userId,c.get("user").id),
+  sql`${bodyAnalyses.photoIds} @> ${JSON.stringify([photo.id])}::jsonb`
+ ));
  await db.delete(bodyPhotos).where(eq(bodyPhotos.id,photo.id));
  await unlink(join(storageDir,photo.storageKey)).catch(()=>{});
  return c.json({ok:true});
