@@ -144,12 +144,13 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     const accept = await app.request(`/v1/friends/requests/${inviteBody.requestId}`, { method: "PATCH", headers: { Authorization: `Bearer ${stranger.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "accept" }) });
     expect(accept.status).toBe(200);
     const friendsAfterAccept = await app.request("/v1/friends", { headers: ownerHeaders });
-    expect((await friendsAfterAccept.json()).friends).toHaveLength(1);
+    const friendsAfterAcceptBody = await friendsAfterAccept.json();
+    expect(friendsAfterAcceptBody.friends).toHaveLength(1);
     const ranking = await app.request("/v1/leaderboard", { headers: ownerHeaders });
     const rankingRows = await ranking.json();
     expect(rankingRows.map((x:any)=>x.id).sort()).toEqual([owner.user.id,stranger.user.id].sort());
     expect(rankingRows.some((x:any)=>x.id===outsider.user.id)).toBe(false);
-    const requestId = (await friendsAfterAccept.json()).friends[0].requestId;
+    const requestId = friendsAfterAcceptBody.friends[0].requestId;
     const remove = await app.request(`/v1/friends/${requestId}`, { method: "DELETE", headers: ownerHeaders });
     expect(remove.status).toBe(200);
     const rankingAfterRemove = await app.request("/v1/leaderboard", { headers: ownerHeaders });
