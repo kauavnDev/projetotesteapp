@@ -14,6 +14,17 @@ async function syncSavingsPoints(executor:any,userId:string) {
 }
 coreRoutes.use("*",auth);
 
+coreRoutes.get("/preferences",async c=>{
+ const [user]=await db.select({showMotivationOnOpen:users.showMotivationOnOpen}).from(users).where(eq(users.id,c.get("user").id)).limit(1);
+ return c.json({showMotivationOnOpen:user?.showMotivationOnOpen??true});
+});
+coreRoutes.patch("/preferences",async c=>{
+ const body=await c.req.json();
+ if(!body||typeof body.showMotivationOnOpen!=="boolean")return c.json({error:{code:"INVALID_PREFERENCE",message:"Informe se deseja mostrar a motivação ao abrir."}},400);
+ const [user]=await db.update(users).set({showMotivationOnOpen:body.showMotivationOnOpen}).where(eq(users.id,c.get("user").id)).returning({showMotivationOnOpen:users.showMotivationOnOpen});
+ return user?c.json(user):c.json({error:{code:"NOT_FOUND",message:"Usuário não encontrado."}},404);
+});
+
 coreRoutes.get("/habits",async c=>{
  const uid=c.get("user").id, rows=await db.select().from(habits).where(eq(habits.userId,uid)).orderBy(desc(habits.createdAt));
  const cutoff=new Date(Date.now()-400*86400000).toISOString().slice(0,10);
