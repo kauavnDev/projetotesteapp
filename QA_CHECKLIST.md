@@ -44,8 +44,10 @@
 - [ ] Reabrir app após vários dias e renovar janela de 30 dias.
 - [ ] Confirmar limitações do Android para alarmes exatos e economia de bateria.
 
-## Dinheiro e metas
+## Finanças, cofrinho e metas
 
+- [ ] Entradas e despesas por categoria, resumo mensal, saldo e histórico editável no mobile e web.
+- [ ] Isolamento de transações entre usuários; CRUD e validação de centavos.
 - [ ] Depósitos e retiradas com centavos, motivo detalhado obrigatório e saldo não negativo.
 - [ ] Editar/excluir lançamentos recalcula saldo e pontos.
 - [ ] Operações concorrentes não geram saldo negativo.
