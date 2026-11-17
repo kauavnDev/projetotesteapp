@@ -170,16 +170,18 @@ const starterQuotes=[
  "A paciência também é uma forma de força.",
  "Hoje é uma nova oportunidade de fazer um pouco melhor."
 ];
+async function ensureStarterQuotes(){
+ const [active]=await db.select({id:quotes.id}).from(quotes).where(eq(quotes.active,true)).limit(1);
+ if(active)return;
+ await db.transaction(async tx=>{
+  await tx.execute(sql`select pg_advisory_xact_lock(9102026)`);
+  const [existing]=await tx.select({id:quotes.id}).from(quotes).where(eq(quotes.active,true)).limit(1);
+  if(!existing)await tx.insert(quotes).values(starterQuotes.map((text,i)=>({text,color:i%2?"#FB923C":"#E11D48",animation:i%3===0?"pulse":i%3===1?"fade":"gradient",author:"Forge",active:true})));
+ });
+}
 coreRoutes.get("/quotes/today",async c=>{
- let active=await db.select().from(quotes).where(eq(quotes.active,true)).orderBy(desc(quotes.createdAt),desc(quotes.id));
- if(!active.length){
-  await db.transaction(async tx=>{
-   await tx.execute(sql`select pg_advisory_xact_lock(9102026)`);
-   const [existing]=await tx.select({id:quotes.id}).from(quotes).where(eq(quotes.active,true)).limit(1);
-   if(!existing)await tx.insert(quotes).values(starterQuotes.map((text,i)=>({text,color:i%2?"#FB923C":"#E11D48",animation:i%3===0?"pulse":i%3===1?"fade":"gradient",author:"Forge",active:true})));
-  });
-  active=await db.select().from(quotes).where(eq(quotes.active,true)).orderBy(desc(quotes.createdAt));
- }
+ await ensureStarterQuotes();
+ const active=await db.select().from(quotes).where(eq(quotes.active,true)).orderBy(desc(quotes.createdAt),desc(quotes.id));
  const today=new Intl.DateTimeFormat("en-CA",{timeZone:process.env.APP_TIME_ZONE??"America/Sao_Paulo"}).format(new Date());
  const day=Math.floor((Date.parse(today+"T00:00:00Z")-Date.parse(today.slice(0,4)+"-01-01T00:00:00Z"))/86400000);
  return c.json(active.length?active[day%active.length]:{text:"A disciplina de hoje constrói a liberdade de amanhã.",color:"#E11D48",animation:"fade",author:"Forge"});
@@ -241,7 +243,7 @@ coreRoutes.get("/admin/metrics",adminOnly,async c=>{
  const [f]=await db.select({income:sql<number>`coalesce(sum(case when type='income' then amount::numeric else 0 end),0)`,expenses:sql<number>`coalesce(sum(case when type='expense' then amount::numeric else 0 end),0)`}).from(financeTransactions);
  return c.json({users:Number(u.count),habits:Number(h.count),netSavings:Number(s.total),financeIncome:Number(f.income),financeExpenses:Number(f.expenses)});
 });
-coreRoutes.get("/admin/quotes",adminOnly,async c=>c.json(await db.select().from(quotes).orderBy(desc(quotes.createdAt))));
+coreRoutes.get("/admin/quotes",adminOnly,async c=>{await ensureStarterQuotes();return c.json(await db.select().from(quotes).orderBy(desc(quotes.createdAt),desc(quotes.id)));});
 coreRoutes.post("/admin/quotes",adminOnly,async c=>{const b=quoteSchema.parse(await c.req.json());const [r]=await db.insert(quotes).values(b).returning();return c.json(r,201);});
 coreRoutes.patch("/admin/quotes/:id",adminOnly,async c=>{const b=quoteSchema.partial().parse(await c.req.json());if(!Object.keys(b).length)return c.json({error:{code:"EMPTY_UPDATE",message:"Informe ao menos um campo."}},400);const [r]=await db.update(quotes).set(b).where(eq(quotes.id,c.req.param("id"))).returning();return r?c.json(r):c.json({error:{code:"NOT_FOUND",message:"Frase não encontrada."}},404);});
 coreRoutes.delete("/admin/quotes/:id",adminOnly,async c=>{await db.delete(quotes).where(eq(quotes.id,c.req.param("id")));return c.json({ok:true});});
