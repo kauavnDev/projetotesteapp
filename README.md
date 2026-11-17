@@ -1,117 +1,159 @@
 # Forge o seu amanhã
 
-Aplicativo pessoal em português do Brasil para acompanhar **Rotina, Dinheiro, Corpo e Mente**, com ranking compartilhado entre usuários convidados.
+Aplicativo pessoal em português do Brasil para acompanhar **Rotina, Dinheiro, Corpo e Mente**, com ranking compartilhado entre pessoas convidadas.
 
-## Estrutura
+## Stack
 
-- `apps/mobile`: Expo SDK 51, Expo Router, Reanimated 3, Zustand, câmera e notificações locais.
-- `apps/api`: Hono em Node ESM, build esbuild, Drizzle ORM, PostgreSQL, autenticação bcryptjs/JWT e endpoints privados.
-- `apps/admin`: Next.js 14 + Tailwind; painel web de usuário e área administrativa condicional.
-- `packages/shared`: schemas Zod e tipos compartilhados.
-- `apps/api/drizzle`: migração SQL inicial versionada.
+- Monorepo pnpm + Turborepo.
+- apps/mobile: Expo SDK 51, Expo Router, Reanimated 3, Zustand, câmera e notificações locais.
+- apps/api: Hono em Node ESM, esbuild, Drizzle ORM e PostgreSQL.
+- apps/admin: Next.js 14 + Tailwind, painel web de usuário e administração condicional.
+- packages/shared: schemas Zod e regras compartilhadas.
+- Autenticação bcryptjs + jose: access token de 15 minutos e refresh token de 30 dias, com hash/rotação no banco.
 
-## Requisitos e instalação
+## Testar usando somente Android
 
-- Node.js 20 ou 22; pnpm 9.12.3 (via Corepack ou instalação oficial).
+O repositório inclui um Dev Container para abrir o projeto no GitHub Codespaces, sem instalar Node ou PostgreSQL no celular. **Controle de custo:** em contas pessoais GitHub Free, a documentação atual informa 120 horas-core e 15 GB-mês incluídos; o consumo depende do tamanho da máquina e do tempo ativo. Escolha a máquina de 2 núcleos, pare o Codespace quando terminar e não adicione forma de pagamento nem aumente limite de gastos. Sem forma de pagamento, o GitHub bloqueia o uso que ultrapassa a cota incluída. Consulte [a cota e cobrança do Codespaces](https://docs.github.com/en/billing/concepts/product-billing/github-codespaces).
+
+1. Abra [o repositório Forge](https://github.com/kauavnDev/projetotesteapp) no Chrome.
+2. No botão **Code**, abra **Codespaces** e crie um Codespace na branch `forge/qa-foundation-2026-11-17` (a branch da PR #1). **Não escolha `main` ainda**: a configuração de Codespaces e o lockfile estão nessa branch e a PR ainda não foi mesclada.
+3. Aguarde a preparação do Dev Container. Ele instala pnpm/dependências e inicia um PostgreSQL 16 local no Codespace.
+4. O script scripts/codespaces-init.mjs cria arquivos locais ignorados pelo Git e configura a URL encaminhada da API para o Android.
+5. Abra a aba **Ports** do Codespaces e confira:
+   - 8787 — API, privada por padrão. Mude para **Public** somente durante o teste no Android.
+   - 8081 — Expo Metro, privada por padrão. Mude para **Public** enquanto o Expo Go precisar conectar.
+   - 3000 — painel web, privada.
+6. **Antes de criar contas administrativas**, edite apps/api/.env e informe os dois e-mails que terão acesso administrativo. Por segurança, ADMIN_EMAILS começa vazio e nenhum usuário recebe acesso admin até você configurar exatamente dois endereços válidos e distintos.
+7. No terminal do Codespace, aplique a migração e inicie os serviços em terminais separados:
+
+~~~bash
+pnpm db:migrate
+~~~
+
+Terminal 1 — API:
+
+~~~bash
+pnpm --filter @forge/api dev
+~~~
+
+Terminal 2 — painel web:
+
+~~~bash
+pnpm --filter @forge/admin dev
+~~~
+
+Terminal 3 — aplicativo Expo:
+
+~~~bash
+pnpm --filter @forge/mobile dev
+~~~
+
+Se o QR code não conectar ao celular, tente iniciar o Expo com pnpm --filter @forge/mobile dev -- --tunnel. O túnel pode exigir que o Expo instale o pacote auxiliar. Abra o painel web pela porta 3000 e use o Expo Go no Android para abrir o projeto.
+
+**Compatibilidade Expo Go (17/11/2026):** o projeto usa SDK 51, enquanto o seletor oficial atualmente mostra SDK 58 como versão mais recente. A versão instalada pela Play Store não deve ser presumida compatível. No Android, abra [expo.dev/go](https://expo.dev/go), escolha SDK 51 e instale a versão correspondente, se o seletor ainda a disponibilizar. O Expo Go aceita apenas a versão de SDK incluída naquela build; consulte [a documentação de incompatibilidade](https://docs.expo.dev/troubleshooting/expo-go-version-mismatch/). Se SDK 51 não estiver disponível ou algum módulo nativo não funcionar no Expo Go, use um APK de preview: o perfil `preview` em `apps/mobile/eas.json` está configurado para APK e pode ser gerado com `npx eas-cli build --platform android --profile preview`. Isso exige conta Expo e login no Codespace; não há credenciais salvas e nenhum build foi solicitado ainda. Não atualize o SDK às pressas: migre uma versão por vez e valide os módulos nativos.
+
+**Segurança do Codespaces:** as portas 8787 e 8081 começam privadas. Torne-as públicas somente durante a conexão do Android/Expo Go e volte para Private ao terminar. Use apenas dados fictícios, fotos de teste e um Codespace temporário; não coloque fotos pessoais ou credenciais reais nesse ambiente.
+
+## Requisitos para desenvolvimento local
+
+- Node.js 20 ou 22.
+- pnpm 9.12.3 via Corepack.
 - PostgreSQL 15+ ou Neon.
-- Configure as variáveis de ambiente a partir do modelo:
+- Android físico/emulador para testar câmera e notificações.
 
-```bash
-cp .env.example .env
-# preencha DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET e ADMIN_EMAILS
-pnpm install
-```
+Copie os modelos de ambiente para os arquivos locais correspondentes:
 
-Gere segredos fortes, por exemplo `openssl rand -base64 48`. `ADMIN_EMAILS` deve conter **somente os dois e-mails** autorizados, separados por vírgula. Não compartilhe nem versione `.env`.
+~~~bash
+cp apps/api/.env.example apps/api/.env
+cp apps/admin/.env.example apps/admin/.env.local
+cp apps/mobile/.env.example apps/mobile/.env
+~~~
+
+Ajuste DATABASE_URL, os dois segredos JWT, ADMIN_EMAILS, CORS_ORIGINS, NEXT_PUBLIC_API_URL e EXPO_PUBLIC_API_URL. Em aparelho Android físico, localhost não aponta para o computador; use o endereço público encaminhado do Codespaces ou o IP LAN do computador. Os arquivos reais .env são ignorados pelo Git.
+
+O arquivo pnpm-lock.yaml está versionado. Instale de forma reproduzível:
+
+~~~bash
+corepack enable
+corepack prepare pnpm@9.12.3 --activate
+pnpm install --frozen-lockfile
+~~~
 
 ## Desenvolvimento
 
-```bash
+~~~bash
 pnpm --filter @forge/shared build
 pnpm db:migrate
 pnpm dev
-```
+~~~
 
-- API: `http://localhost:8787/health`
-- Painel web: `http://localhost:3000`
-- Expo: `pnpm --filter @forge/mobile dev`
+- API: http://localhost:8787/health
+- Painel web: http://localhost:3000
+- Expo: pnpm --filter @forge/mobile dev
 
-No mobile, o tema claro/escuro acompanha parcialmente o tema do sistema; o painel web tem alternância própria. A adaptação visual completa do tema em todas as telas móveis ainda precisa de QA e refinamento.
-
-O aplicativo web aceita login de usuários e administradores. Cadastro de conta pode ser feito pelo aplicativo móvel via `POST /v1/auth/register`.
+A API carrega apps/api/.env quando iniciada pelo script do workspace. O Next.js carrega apps/admin/.env.local; Expo carrega apps/mobile/.env.
 
 ## Banco e migrações
 
-A migração inicial está em `apps/api/drizzle/0000_forge_baseline.sql`. Para banco vazio:
+As migrações estão em apps/api/drizzle/ e são registradas em apps/api/drizzle/meta/_journal.json. `0000_forge_baseline.sql` cria a estrutura inicial; `0001_finance_transactions.sql` adiciona o livro-razão de entradas e despesas; `0002_friendships.sql` adiciona convites e conexões entre amigos. O Dev Container e a CI aplicam todas em PostgreSQL limpo.
 
-```bash
+~~~bash
 pnpm db:migrate
-```
+~~~
 
-A pasta contém o SQL baseline e o journal necessários para aplicar a migração inicial pelo Drizzle. O comando `db:generate` está declarado, mas **não foi validado neste ambiente e o snapshot inicial do Drizzle ainda não foi gerado**. Não o use para gerar mudanças até instalar as dependências e criar/validar esse snapshot; caso contrário, o gerador pode interpretar o schema atual como uma primeira migração completa. Por enquanto, novas alterações devem ser preparadas como migrações SQL versionadas e registradas no journal, ou aguardar a geração do snapshot inicial.
+Os snapshots do Drizzle estão versionados em apps/api/drizzle/meta/ (0000, 0001 e 0002). A CI executa drizzle-kit generate para detectar drift e falha se uma alteração de schema gerar uma migração não revisada. Para novas mudanças, use pnpm db:generate, revise o SQL, o snapshot e o journal e versione todos juntos. Em banco existente, faça backup e confira __drizzle_migrations antes de aplicar; não rode o SQL manualmente e depois pelo Drizzle.
 
-Não rode a migração inicial manualmente e depois novamente pelo Drizzle. Em bancos existentes, faça backup e valide o estado da tabela `__drizzle_migrations` antes de aplicar.
+## Funcionalidades presentes no código
 
-## Funcionalidades implementadas no código
+- Cadastro/login, hash bcrypt, access token de 15 minutos, refresh token de 30 dias com hash, rotação e revogação.
+- Autorização recalculada no servidor a partir de ADMIN_EMAILS; contas desativadas são bloqueadas.
+- Hábitos com frequência, dias, horário, cor, conclusão diária idempotente e sequência calculada.
+- Finanças mensais com entradas, despesas, categorias, saldo, histórico editável e exclusão; cofrinho separado para depósitos/retiradas, pontos e metas.
+- Poupança com depósitos, retiradas com motivo detalhado, edição/exclusão, saldo e pontos (R$ 1 líquido = 1 ponto); alterações financeiras usam lock transacional por usuário.
+- Metas com valor-alvo, prazo e progresso baseado no saldo poupado.
+- Convites de amizade por e-mail, aceite/recusa e ranking restrito ao próprio usuário e às conexões aceitas; novos usuários não aparecem no ranking de terceiros.
+- Ranking, ledger de pontos e frase do dia.
+- Diário privado da mente com humor e reflexões editáveis.
+- Alarmes locais recorrentes e exceções por data; o app agenda os próximos 30 dias no dispositivo quando a tela de alarmes é aberta.
+- Perfil corporal com altura/peso, fotos privadas JPG/PNG/WebP, timeline/antes-depois no mobile e exclusão por proprietário.
+- Análise visual por IA apenas com consent: true, fotos do próprio usuário e OPENAI_API_KEY configurada. A resposta é não médica e não deve estimar medidas, gordura ou diagnóstico.
+- Biblioteca inicial de 30 frases motivacionais com rotação diária; administração de usuários, frases (texto, cor, autor, animação) e métricas, protegida por allowlist no servidor.
 
-- Cadastro/login, hash bcrypt, access token de 15 minutos, refresh token de 30 dias com hash no banco e rotação/revogação.
-- Autorização recalculada no servidor a partir do e-mail e `ADMIN_EMAILS`; contas desativadas são bloqueadas.
-- Hábitos com frequência, dias, horário, cor, conclusão diária e sequência calculada.
-- Poupança com depósito, retirada (motivo de no mínimo 12 caracteres), edição/exclusão, saldo e pontos acumulados (R$ 1 líquido = 1 ponto). Operações financeiras são serializadas por lock transacional por usuário.
-- Metas com valor-alvo, data limite e progresso baseado no saldo poupado.
-- Ranking e ledger de pontos.
-- Diário privado de mente com humor e reflexões editáveis.
-- Alarmes locais recorrentes e exceções de data vinculadas a um alarme base. O app agenda os próximos 30 dias no dispositivo ao abrir a tela de alarmes.
-- Frase do dia e CRUD administrativo de frases (texto, cor, autor e animação).
-- Administração de usuários (nome/estado ativo), frases e métricas.
-- Perfil corporal, upload de fotos JPG/PNG/WebP com validação do conteúdo/tamanho, visualização autenticada e exclusão por proprietário.
-- Análise visual por IA somente quando `consent: true`, fotos pertencem ao usuário e `OPENAI_API_KEY` está configurada. A instrução proíbe estimar medidas, gordura ou fazer diagnóstico; o resultado é explicitamente não médico.
+## Limitações conhecidas — não considerar como testadas
 
-## Fotos privadas e análise por IA: configuração importante
+- A tela web concentra o acesso em uma página; finanças, cofrinho e metas estão disponíveis, mas a timeline corporal e o agendamento de alarmes ainda precisam de uma experiência web completa.
+- Notificações são locais no dispositivo; não há serviço de push remoto configurado.
+- Fotos ficam em disco privado local por padrão. Isso serve para desenvolvimento/teste em um único servidor persistente, não para produção serverless. Produção exige bucket privado/volume persistente, backup, retenção e políticas de acesso.
+- Análise por IA retorna 503 AI_NOT_CONFIGURED sem OPENAI_API_KEY. Não há chave incluída nem análise validada aqui.
+- Expo Go pode não suportar mais SDK 51; um APK próprio depende de build EAS e conta Expo.
+- O rate limit de login é em memória por instância. Produção com múltiplas instâncias precisa de Redis/KV compartilhado e proxy confiável.
+- Ainda é necessário QA manual em Android real, permissões de câmera/notificações, rotação de sessão, isolamento de contas, CORS, upload e painel web.
 
-Por padrão, os arquivos ficam em `PRIVATE_UPLOAD_DIR` (padrão `.private-uploads`), fora das pastas públicas, com diretórios `0700`, arquivos `0600`, nomes aleatórios e entrega apenas por rota autenticada do próprio usuário. O diretório é ignorado pelo Git.
+## Testes
 
-**Esse armazenamento local é adequado para desenvolvimento e teste em um único servidor com disco persistente. Não é um bucket gerenciado, não oferece redundância e pode ser efêmero em plataformas serverless.** Para produção, configure `PRIVATE_UPLOAD_DIR` para um volume persistente privado ou implemente um bucket privado S3/R2/Supabase Storage com credenciais próprias, políticas de acesso privado, backup, retenção e URLs assinadas. Não exponha esse diretório como estático.
-
-A análise envia as imagens escolhidas ao provedor configurado apenas após consentimento explícito a cada solicitação. Configure `OPENAI_API_KEY` e, opcionalmente, `OPENAI_MODEL`. Sem a chave, a rota retorna `503 AI_NOT_CONFIGURED`; isso não é uma análise testada. Não use a funcionalidade como avaliação médica.
-
-## Segurança e configuração
-
-Variáveis necessárias:
-
-- `DATABASE_URL`
-- `DB_POOL_MAX` (opcional; padrão 10)
-- `JWT_ACCESS_SECRET` e `JWT_REFRESH_SECRET` (mínimo de 32 caracteres cada)
-- `ADMIN_EMAILS` (exatamente os dois e-mails autorizados)
-- `CORS_ORIGINS` (origens exatas permitidas, separadas por vírgula)
-- `APP_TIME_ZONE` (padrão `America/Sao_Paulo`)
-- `UPLOAD_MAX_MB`, `PRIVATE_UPLOAD_DIR`
-- `OPENAI_API_KEY` e `OPENAI_MODEL` (opcionais para IA)
-- `NEXT_PUBLIC_API_URL` e `EXPO_PUBLIC_API_URL`
-
-O rate limit de login em memória protege uma instância. Em produção com múltiplas instâncias, substitua por Redis/KV compartilhado e configure `CF-Connecting-IP` ou `X-Real-IP` somente a partir de proxy confiável. A aplicação não confia em `X-Forwarded-For` arbitrário. Configure CORS com origens explícitas. Configure também o limite de tamanho de requisição no proxy reverso (upload até `UPLOAD_MAX_MB` + multipart overhead); a validação de tamanho do arquivo ocorre após o parse multipart.
-
-## Testes e validação
-
-```bash
+~~~bash
 node --test scripts/*.test.mjs
 pnpm verify:static
 pnpm test
 pnpm lint
 pnpm build
-```
+pnpm db:migrate
+~~~
 
-No ambiente desta retomada, **7 testes estáticos de contrato passaram**, **11 verificações estáticas passaram** e o parser do TypeScript transpôs 27 arquivos TS/TSX sem erros de sintaxe. Isso não substitui typecheck, build, Vitest, testes de API ou integração real. O arquivo `pnpm-lock.yaml` ainda não foi gerado porque o ambiente de desenvolvimento atual não tem acesso ao registry; `pnpm` não está instalado localmente e o Corepack não conseguiu baixá-lo (`EAI_AGAIN`). Execute `pnpm install` em ambiente com rede e versione o lockfile antes de CI. Ainda é necessário executar os comandos acima com dependências instaladas, configurar PostgreSQL/Neon e fazer QA integrado em Android/iOS e navegadores. Sem `DATABASE_URL`, chaves, serviço de armazenamento privado persistente e credenciais EAS, não há como declarar migração, upload em produção, análise por IA, notificações em aparelho físico ou deploy validados.
+Na CI de 17/11/2026 (revisão de finanças), passaram 8 testes Node de contrato, 11 verificações estáticas e 23 testes Vitest em 4 arquivos. A execução também validou a ausência de drift Drizzle, aplicou as migrações 0000, 0001 e 0002 em PostgreSQL 16 limpo, executou typecheck nos workspaces e compilou a API e o painel Next.js. A cobertura inclui CRUD/isolamento das transações financeiras, resumo mensal, validação de período, convites/aceite de amizade e ranking privado, biblioteca inicial de frases, alarmes, upload privado, exclusão de análises ligadas às fotos e consentimento de IA. O build nativo Expo/APK não faz parte dessa validação. Isso não substitui testes no Android físico nem valida o provedor de IA ou armazenamento de produção.
 
-Consulte `QA_CHECKLIST.md` antes de qualquer publicação. Nenhum deploy é executado por este projeto.
+## Segurança e deploy
 
-## Deploy (quando autorizado)
+Variáveis relevantes:
 
-1. Provisionar PostgreSQL/Neon e armazenamento privado persistente; configurar secrets no host da API.
-2. Executar `pnpm db:migrate` no ambiente de destino antes de iniciar a API.
-3. Construir API com `pnpm --filter @forge/api build` e iniciar com `pnpm --filter @forge/api start`.
-4. Construir web com `pnpm --filter @forge/admin build`, configurando `NEXT_PUBLIC_API_URL`.
-5. Configurar `EXPO_PUBLIC_API_URL` e credenciais EAS; validar permissões de câmera/notificações e build Android/iOS.
-6. Validar CORS, allowlist admin, rotação de refresh token, rate limit compartilhado, backup e restauração do armazenamento privado.
+- DATABASE_URL, DB_POOL_MAX
+- JWT_ACCESS_SECRET, JWT_REFRESH_SECRET (mínimo de 32 caracteres, diferentes entre si)
+- ADMIN_EMAILS (exatamente dois e-mails válidos e distintos; se a lista estiver incompleta, duplicada ou inválida, a aplicação falha de forma fechada e ninguém recebe acesso admin)
+- CORS_ORIGINS (origens exatas, separadas por vírgula)
+- APP_TIME_ZONE, UPLOAD_MAX_MB, PRIVATE_UPLOAD_DIR
+- OPENAI_API_KEY, OPENAI_MODEL (opcionais)
+- NEXT_PUBLIC_API_URL, EXPO_PUBLIC_API_URL
 
-Deploy e qualquer gasto exigem autorização explícita do proprietário.
+Nunca versione .env, tokens, fotos ou credenciais. O rate limit atual usa memória local e só confia em cabeçalhos de IP quando o proxy os sobrescreve de forma confiável. Configure também limites de requisição no proxy reverso.
+
+**Nenhum deploy de produção, compra de serviço ou gasto é realizado por este projeto sem autorização explícita.** Antes de publicar, configure banco, armazenamento privado persistente, secrets, rate limit compartilhado, backup/restauração, CORS e build Android/iOS; revise QA_CHECKLIST.md.

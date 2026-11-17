@@ -1,49 +1,90 @@
-# Checklist de QA antes de produção
+# Checklist de QA do Forge
 
-## Ferramentas e build
-- [ ] `pnpm install` com rede e lockfile gerado/commitado.
-- [ ] `pnpm --filter @forge/shared build`, `pnpm lint`, `pnpm test` e `pnpm build` sem erros.
-- [ ] Verificar build Expo SDK 51 em Android e iOS.
+## Validação automatizada concluída em 17/11/2026
 
-## Banco e autenticação
-- [ ] Aplicar `pnpm db:migrate` em PostgreSQL limpo e confirmar todas as tabelas/índices.
-- [ ] Cadastro, login, bcrypt, access 15 min, refresh 30 dias, rotação concorrente e logout.
-- [ ] Testar allowlist com exatamente dois e-mails; usuário comum recebe 403 em todas as rotas admin.
-- [ ] Desativar conta e confirmar bloqueio de access e refresh tokens.
-- [ ] Testar rate limit atrás de proxy confiável e CORS com origem permitida/não permitida.
+- [x] pnpm install com lockfile versionado.
+- [x] 8 testes Node de contrato passaram.
+- [x] 11 verificações estáticas passaram.
+- [x] Snapshot Drizzle gerado e drift check sem migração adicional.
+- [x] Migrações 0000, 0001 e 0002 aplicadas em PostgreSQL 16 limpo.
+- [x] 23 testes Vitest passaram em 4 arquivos, incluindo CRUD financeiro, convites/aceite de amizade, ranking privado e biblioteca de frases.
+- [x] TypeScript passou nos workspaces.
+- [x] Build esbuild da API e build Next.js do painel passaram.
+- [ ] Build nativo Expo/APK e teste em Android físico.
 
-## Rotina, dinheiro e metas
-- [ ] CRUD de hábitos, frequência/dias, check diário idempotente (POST repetido não alterna estado), desmarcação via DELETE e streak em timezone configurado.
-- [ ] Testar depósitos de R$ 0,50 + R$ 0,50 = 1 ponto; retirada e exclusão/edit com saldo recalculado.
-- [ ] Confirmar retiradas sem motivo detalhado (mínimo 12 caracteres) são rejeitadas.
-- [ ] Confirmar operações concorrentes não produzem saldo negativo.
-- [ ] CRUD de metas e progresso com poupança líquida.
-- [ ] Diário da mente: CRUD e isolamento entre usuários.
+## Automação e ambiente
+
+- [ ] Dev Container abre no GitHub Codespaces usando somente o navegador Android.
+- [ ] PostgreSQL 16 do Codespaces fica saudável.
+- [ ] pnpm install, build do pacote shared, static checks, typecheck e builds passam.
+- [ ] pnpm db:migrate aplica a baseline em banco PostgreSQL limpo.
+- [ ] Teste de integração confirma as tabelas e a unicidade de conclusão diária.
+- [ ] pnpm-lock.yaml é versionado e a CI passa a usar instalação congelada.
+
+## Android e sessão
+
+- [ ] Confirmar qual Expo Go é compatível com SDK 51 ou gerar development build EAS.
+- [ ] Cadastro, login, refresh token após 15 minutos, rotação e logout.
+- [ ] Fechar/reabrir app e documentar comportamento da sessão em memória.
+- [ ] Testar navegação, layout, teclado, telas pequenas e tema claro/escuro.
+
+## Rotina
+
+- [ ] CRUD de hábitos, frequência/dias, horário, cor e streak.
+- [ ] Check repetido é idempotente; desmarcação remove o registro e os pontos.
+- [ ] Frequência personalizada exige pelo menos um dia.
+- [ ] Fuso horário e mudança de data perto da meia-noite.
 
 ## Alarmes e notificações
-- [ ] Permissões Android/iOS, canal Android e notificações com app fechado.
-- [ ] Confirmar recorrência diária/semanal e re-agendamento ao abrir a tela.
-- [ ] Confirmar exceção de data substitui o horário base sem duplicar notificação.
-- [ ] Testar fuso horário, horário de verão, app encerrado por vários dias e limite de 30 dias.
+
+- [ ] Permissões Android, canal de notificação e lembrete com app fechado.
+- [ ] Recorrência diária/semanal e exceção de data substitui o horário base, inclusive quando move o lembrete para um dia fora da recorrência.
+- [ ] Exceção desativada suprime somente a ocorrência daquela data; alarme base desativado não agenda notificações.
+- [ ] Desativar/editar/excluir alarmes reprograma notificações.
+- [ ] Reabrir app após vários dias e renovar janela de 30 dias.
+- [ ] Confirmar limitações do Android para alarmes exatos e economia de bateria.
+
+## Finanças, cofrinho e metas
+
+- [x] Entradas e despesas por categoria, resumo mensal, saldo e histórico editável no mobile e web (CI e typecheck; falta QA visual Android).
+- [x] Isolamento de transações entre usuários; CRUD e validação de centavos (testes de integração).
+- [ ] Depósitos e retiradas com centavos, motivo detalhado obrigatório e saldo não negativo.
+- [ ] Editar/excluir lançamentos recalcula saldo e pontos.
+- [ ] Operações concorrentes não geram saldo negativo.
+- [ ] R$ 1 líquido = 1 ponto; saldo de metas e ranking consistentes.
+- [ ] CRUD de metas e prazo.
 
 ## Corpo e privacidade
-- [ ] Upload JPG/PNG/WebP válido, arquivo disfarçado, arquivo corrompido e tamanho excedido.
-- [ ] Acessar/deletar foto de outro usuário deve retornar 404/403.
-- [ ] Verificar diretório fora do webroot, permissões 0700/0600, volume persistente e backup.
-- [ ] Análise sem consentimento deve falhar; sem chave retorna 503; com chave e consentimento testa provedor.
-- [ ] Confirmar a resposta não faz diagnóstico nem estima medidas/percentual de gordura.
-- [ ] Testar exclusão de foto referenciada por análise e política de retenção.
 
-## Admin e interfaces
-- [ ] CRUD de frases com texto, cor, animação e autor.
-- [ ] Ativar/desativar usuário e validar sessão revogada no próximo request.
-- [ ] Métricas agregadas e ranking consistentes.
-- [ ] Testar painel web em mobile/desktop e aplicativo móvel em aparelho físico.
-- [ ] Validar acessibilidade, temas claro/escuro, feedback tátil e animações.
+- [ ] Perfil altura/peso valida limites.
+- [ ] Upload JPG/PNG/WebP, arquivo disfarçado/corrompido e tamanho excedido.
+- [ ] Foto de outro usuário retorna 404/403; diretório fica fora do webroot.
+- [ ] Diretórios 0700, arquivos 0600, acesso autenticado e cache privado.
+- [ ] Timeline, seleção, comparação antes/depois e exclusão.
+- [ ] Análise sem consentimento falha; sem chave retorna 503; com chave e consentimento valida provedor.
+- [ ] Confirmar que a análise não estima medidas, percentual de gordura nem diagnóstico.
+- [ ] Política de retenção/exclusão de análises ligadas a fotos removidas.
 
-## Deploy
-- [ ] Configurar secrets sem versionar `.env`.
-- [ ] Configurar storage privado persistente/bucket privado; armazenamento local efêmero não é aceitável.
-- [ ] Configurar rate limit compartilhado Redis/KV para múltiplas instâncias.
-- [ ] Backup e restauração do banco e fotos; política de retenção e exclusão.
-- [ ] Nenhum deploy sem autorização explícita.
+## Amigos e ranking privado
+
+- [x] Convite por e-mail, aceite/recusa, cancelamento e remoção de amizade (API e interface; fluxo automatizado).
+- [x] Ranking inclui apenas o próprio usuário e amigos aceitos; teste confirma que terceiros não aparecem.
+
+## Mente e painel web
+
+- [ ] CRUD do diário e isolamento entre usuários.
+- [ ] Login web, refresh token e logout.
+- [ ] Painel usuário em celular/desktop.
+- [ ] Gestão de amizades no mobile e web.
+- [ ] Edição/exclusão web de hábitos, finanças, poupança, metas e diário.\n- [ ] Rotação diária das frases motivacionais e CRUD administrativo.
+- [ ] Timeline de fotos e alarmes na interface web.
+- [ ] Admin: allowlist de exatamente dois e-mails, CRUD de frases, usuários e métricas.
+- [ ] Usuário comum recebe 403 em todas as rotas admin; contas desativadas perdem acesso.
+
+## Deploy — bloqueado sem autorização
+
+- [ ] Banco gerenciado, secrets, CORS e rate limit compartilhado.
+- [ ] Bucket/volume privado persistente e backup/restauração.
+- [ ] Limites de upload no proxy, retenção e exclusão de dados.
+- [ ] Teste Android/iOS físico e build EAS.
+- [ ] Nenhum deploy de produção ou gasto sem autorização explícita.

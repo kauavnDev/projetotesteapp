@@ -1,11 +1,23 @@
 import {useAuth} from "../store/auth";
-const BASE=process.env.EXPO_PUBLIC_API_URL||"http://localhost:8787/v1";
+
+export const API_BASE=(process.env.EXPO_PUBLIC_API_URL??"").replace(/\/+$/,"");
+const endpoint=(path:string)=>`${API_BASE}${path.startsWith("/")?path:`/${path}`}`;
+
 export async function api(path:string,options:RequestInit={}){
- const state=useAuth.getState(),headers={...(options.headers as any),...(state.accessToken?{Authorization:`Bearer ${state.accessToken}`}:{})};
- let response=await fetch(BASE+path,{...options,headers});
- if(response.status===401&&state.refreshToken&&path!=="/auth/refresh"){
-  const rr=await fetch(BASE+"/auth/refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({refreshToken:state.refreshToken})});
-  if(rr.ok){const next=await rr.json();useAuth.getState().setSession(next);response=await fetch(BASE+path,{...options,headers:{...(options.headers as any),Authorization:`Bearer ${next.accessToken}`}})}else useAuth.getState().clear();
+ if(!API_BASE)throw new Error("API não configurada. Defina EXPO_PUBLIC_API_URL no ambiente do aplicativo.");
+ const current=useAuth.getState();
+ const headers=new Headers(options.headers);
+ if(current.accessToken)headers.set("Authorization",`Bearer ${current.accessToken}`);
+ let response=await fetch(endpoint(path),{...options,headers});
+ if(response.status===401&&current.refreshToken&&path!=="/auth/refresh"){
+  const refreshed=await fetch(endpoint("/auth/refresh"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({refreshToken:current.refreshToken})});
+  if(refreshed.ok){
+   const next=await refreshed.json();
+   useAuth.getState().setSession(next);
+   const retryHeaders=new Headers(options.headers);
+   retryHeaders.set("Authorization",`Bearer ${next.accessToken}`);
+   response=await fetch(endpoint(path),{...options,headers:retryHeaders});
+  }else useAuth.getState().clear();
  }
  const data=await response.json().catch(()=>({}));
  if(!response.ok)throw new Error(data.error?.message||"Não foi possível concluir.");

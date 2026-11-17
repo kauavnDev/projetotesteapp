@@ -33,3 +33,19 @@ test('alarm exceptions are attached to a base and scheduled locally',async()=>{
  const core=await read('apps/api/src/routes/core.ts'),mobile=await read('apps/mobile/app/alarms.tsx');
  assert.ok(core.includes('INVALID_OVERRIDE'));assert.ok(mobile.includes('parentAlarmId'));assert.ok(mobile.includes('scheduleNotificationAsync'));
 });
+
+test('Codespaces ports stay private and setup targets the tested branch',async()=>{
+ const config=JSON.parse(await read('.devcontainer/devcontainer.json'));
+ for(const port of ['3000','8787','8081']) assert.equal(config.portsAttributes[port].visibility,'private',`port ${port} must be private by default`);
+ const readme=await read('README.md');
+ assert.ok(readme.includes('forge/qa-foundation-2026-11-17'));
+ assert.ok(readme.includes('Não escolha `main` ainda'));
+ const init=await read('scripts/codespaces-init.mjs');
+ assert.ok(init.includes('??""'));
+ const apiEnv=await read('apps/api/.env.example');
+ assert.match(apiEnv,/^ADMIN_EMAILS=$/m);
+ const eas=JSON.parse(await read('apps/mobile/eas.json'));
+ assert.equal(eas.build.preview.distribution,'internal');
+ assert.equal(eas.build.preview.android.buildType,'apk');
+ assert.equal(eas.build.development,undefined);
+});

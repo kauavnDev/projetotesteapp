@@ -1,18 +1,29 @@
 import { Hono } from "hono";
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { habits, habitLogs, savingsEntries, goals, pointsLedger, quotes, alarms, users, mindEntries } from "../db/schema.js";
+import { habits, habitLogs, savingsEntries, goals, pointsLedger, quotes, alarms, users, mindEntries, financeTransactions, friendships } from "../db/schema.js";
 import { auth, adminOnly } from "../middleware/auth.js";
-import { habitSchema, savingsSchema, goalSchema, quoteSchema, alarmSchema, mindEntrySchema, calculateSavingsPoints, isHabitScheduledOnDate } from "@forge/shared";
+import { habitSchema, habitCreateSchema, savingsSchema, goalSchema, quoteSchema, alarmSchema, mindEntrySchema, calculateSavingsPoints, isHabitScheduledOnDate, financeTransactionSchema, friendInviteSchema, friendRequestActionSchema } from "@forge/shared";
 
 export const coreRoutes = new Hono();
 async function syncSavingsPoints(executor:any,userId:string) {
  const rows=await executor.select().from(savingsEntries).where(eq(savingsEntries.userId,userId));
- const balance=rows.reduce((sum,e)=>sum+(e.type==="deposit"?1:-1)*Number(e.amount),0);
+ const balance=rows.reduce((sum:number,e:any)=>sum+(e.type==="deposit"?1:-1)*Number(e.amount),0);
  await executor.delete(pointsLedger).where(and(eq(pointsLedger.userId,userId),eq(pointsLedger.source,"savings")));
  await executor.insert(pointsLedger).values({userId,source:"savings",sourceId:null,points:calculateSavingsPoints(balance)});
 }
 coreRoutes.use("*",auth);
+
+coreRoutes.get("/preferences",async c=>{
+ const [user]=await db.select({showMotivationOnOpen:users.showMotivationOnOpen}).from(users).where(eq(users.id,c.get("user").id)).limit(1);
+ return c.json({showMotivationOnOpen:user?.showMotivationOnOpen??true});
+});
+coreRoutes.patch("/preferences",async c=>{
+ const body=await c.req.json();
+ if(!body||typeof body.showMotivationOnOpen!=="boolean")return c.json({error:{code:"INVALID_PREFERENCE",message:"Informe se deseja mostrar a motivação ao abrir."}},400);
+ const [user]=await db.update(users).set({showMotivationOnOpen:body.showMotivationOnOpen}).where(eq(users.id,c.get("user").id)).returning({showMotivationOnOpen:users.showMotivationOnOpen});
+ return user?c.json(user):c.json({error:{code:"NOT_FOUND",message:"Usuário não encontrado."}},404);
+});
 
 coreRoutes.get("/habits",async c=>{
  const uid=c.get("user").id, rows=await db.select().from(habits).where(eq(habits.userId,uid)).orderBy(desc(habits.createdAt));
@@ -32,7 +43,7 @@ coreRoutes.get("/habits",async c=>{
  }));
 });
 coreRoutes.post("/habits",async c=>{
- const b=habitSchema.parse(await c.req.json()); if(b.frequency==="custom"&&!b.days.length)return c.json({error:{code:"INVALID_DAYS",message:"Selecione ao menos um dia para a frequência personalizada."}},400); const [r]=await db.insert(habits).values({...b,userId:c.get("user").id}).returning(); return c.json(r,201);
+ const b=habitCreateSchema.parse(await c.req.json()); const [r]=await db.insert(habits).values({...b,userId:c.get("user").id}).returning(); return c.json(r,201);
 });
 coreRoutes.patch("/habits/:id",async c=>{
  const b=habitSchema.partial().parse(await c.req.json());
@@ -134,13 +145,100 @@ coreRoutes.post("/goals",async c=>{const b=goalSchema.parse(await c.req.json());
 coreRoutes.patch("/goals/:id",async c=>{const b=goalSchema.partial().parse(await c.req.json());if(!Object.keys(b).length)return c.json({error:{code:"EMPTY_UPDATE",message:"Informe ao menos um campo."}},400);const [r]=await db.update(goals).set({...b,targetAmount:b.targetAmount?.toFixed(2)}).where(and(eq(goals.id,c.req.param("id")),eq(goals.userId,c.get("user").id))).returning();return r?c.json(r):c.json({error:{code:"NOT_FOUND",message:"Meta não encontrada."}},404);});
 coreRoutes.delete("/goals/:id",async c=>{await db.delete(goals).where(and(eq(goals.id,c.req.param("id")),eq(goals.userId,c.get("user").id)));return c.json({ok:true});});
 
+coreRoutes.get("/friends",async c=>{
+ const uid=c.get("user").id;
+ const [outgoing,incoming]=await Promise.all([
+  db.select({requestId:friendships.id,friendId:users.id,name:users.name,status:friendships.status,createdAt:friendships.createdAt}).from(friendships).innerJoin(users,eq(friendships.addresseeId,users.id)).where(eq(friendships.requesterId,uid)),
+  db.select({requestId:friendships.id,friendId:users.id,name:users.name,status:friendships.status,createdAt:friendships.createdAt}).from(friendships).innerJoin(users,eq(friendships.requesterId,users.id)).where(eq(friendships.addresseeId,uid))
+ ]);
+ return c.json({friends:[...outgoing,...incoming].filter(x=>x.status==="accepted").map(x=>({id:x.friendId,name:x.name,requestId:x.requestId})),incoming:incoming.filter(x=>x.status==="pending"),outgoing:outgoing.filter(x=>x.status==="pending")});
+});
+coreRoutes.post("/friends/invite",async c=>{
+ const b=friendInviteSchema.parse(await c.req.json()),uid=c.get("user").id;
+ const [target]=await db.select({id:users.id,active:users.active}).from(users).where(eq(users.email,b.email)).limit(1);
+ if(!target||!target.active)return c.json({error:{code:"FRIEND_NOT_FOUND",message:"Conta não encontrada. Peça para a pessoa criar uma conta no Forge primeiro."}},404);
+ if(target.id===uid)return c.json({error:{code:"SELF_INVITE",message:"Você não pode adicionar sua própria conta."}},400);
+ const pair=[uid,target.id].sort().join(":");
+ const result=await db.transaction(async tx=>{
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${pair}))`);
+  const [existing]=await tx.select().from(friendships).where(or(and(eq(friendships.requesterId,uid),eq(friendships.addresseeId,target.id)),and(eq(friendships.requesterId,target.id),eq(friendships.addresseeId,uid)))).limit(1);
+  if(existing)return {kind:existing.status==="accepted"?"friends":"pending"} as const;
+  const [row]=await tx.insert(friendships).values({requesterId:uid,addresseeId:target.id,status:"pending"}).returning();
+  return {kind:"created",id:row.id} as const;
+ });
+ if(result.kind==="friends")return c.json({error:{code:"ALREADY_FRIENDS",message:"Vocês já estão conectados."}},409);
+ if(result.kind==="pending")return c.json({error:{code:"REQUEST_EXISTS",message:"Já existe uma solicitação pendente entre vocês."}},409);
+ return c.json({ok:true,requestId:result.id},201);
+});
+coreRoutes.patch("/friends/requests/:id",async c=>{
+ const b=friendRequestActionSchema.parse(await c.req.json()),uid=c.get("user").id;
+ const [request]=await db.select().from(friendships).where(and(eq(friendships.id,c.req.param("id")),eq(friendships.addresseeId,uid),eq(friendships.status,"pending"))).limit(1);
+ if(!request)return c.json({error:{code:"NOT_FOUND",message:"Solicitação não encontrada."}},404);
+ if(b.action==="accept"){const [updated]=await db.update(friendships).set({status:"accepted"}).where(eq(friendships.id,request.id)).returning();return c.json({ok:true,status:updated.status});}
+ await db.delete(friendships).where(eq(friendships.id,request.id));return c.json({ok:true,status:"declined"});
+});
+coreRoutes.delete("/friends/:id",async c=>{
+ const uid=c.get("user").id;
+ const [removed]=await db.delete(friendships).where(and(eq(friendships.id,c.req.param("id")),or(eq(friendships.requesterId,uid),eq(friendships.addresseeId,uid)))).returning({id:friendships.id});
+ return removed?c.json({ok:true}):c.json({error:{code:"NOT_FOUND",message:"Conexão não encontrada."}},404);
+});
+
 coreRoutes.get("/leaderboard",async c=>{
- const rows=await db.select({id:users.id,name:users.name,points:sql<number>`coalesce(sum(${pointsLedger.points}),0)`}).from(users).leftJoin(pointsLedger,eq(users.id,pointsLedger.userId)).where(eq(users.active,true)).groupBy(users.id).orderBy(sql`coalesce(sum(${pointsLedger.points}),0) desc`).limit(100);
+ const uid=c.get("user").id;
+ const relations=await db.select({requesterId:friendships.requesterId,addresseeId:friendships.addresseeId}).from(friendships).where(and(eq(friendships.status,"accepted"),or(eq(friendships.requesterId,uid),eq(friendships.addresseeId,uid))));
+ const friendIds=[uid,...relations.map(r=>r.requesterId===uid?r.addresseeId:r.requesterId)];
+ const rows=await db.select({id:users.id,name:users.name,points:sql<number>`coalesce(sum(${pointsLedger.points}),0)`}).from(users).leftJoin(pointsLedger,eq(users.id,pointsLedger.userId)).where(and(eq(users.active,true),inArray(users.id,friendIds))).groupBy(users.id).orderBy(sql`coalesce(sum(${pointsLedger.points}),0) desc`).limit(100);
  return c.json(rows.map((r,i)=>({...r,position:i+1})));
 });
+
+
+const starterQuotes=[
+ "Você não precisa vencer o ano hoje. Só precisa cumprir o próximo passo.",
+ "Disciplina é escolher o que você quer mais, em vez do que quer agora.",
+ "O progresso silencioso também é progresso. Continue.",
+ "Não compare seu capítulo 2 com o capítulo 20 de outra pessoa.",
+ "Pequenas escolhas repetidas viram grandes mudanças.",
+ "Faça por você, inclusive nos dias em que ninguém estiver olhando.",
+ "Consistência vence intensidade quando a intensidade não dura.",
+ "Seu futuro é construído no que você faz quando a motivação acaba.",
+ "Um erro não apaga o caminho. Aprenda, ajuste e recomece.",
+ "Cuide do corpo que carrega seus sonhos.",
+ "Guardar pouco ainda é guardar. O hábito vale muito.",
+ "Seu dinheiro precisa de direção, não de aparência.",
+ "Não é sobre nunca cair. É sobre aprender a levantar melhor.",
+ "A versão que você quer ser depende das escolhas de hoje.",
+ "Respeite seu ritmo, mas não abandone sua caminhada.",
+ "Você pode começar de novo sem começar do zero.",
+ "Foco é dizer sim ao que importa e não ao que distrai.",
+ "Não espere confiança para agir. A confiança cresce com a prática.",
+ "O descanso também faz parte de uma rotina sustentável.",
+ "Cada hábito concluído é um voto na pessoa que você está construindo.",
+ "Planeje com coragem. Execute com calma. Revise sem culpa.",
+ "Seu valor não é medido por um dia ruim.",
+ "A evolução real acontece quando ninguém está aplaudindo.",
+ "Transforme metas grandes em passos pequenos e possíveis.",
+ "Aproveite o que conquistou sem perder de vista o que deseja construir.",
+ "Você não controla tudo, mas pode escolher seu próximo movimento.",
+ "Uma rotina boa é aquela que cabe na vida real.",
+ "Não gaste para impressionar. Guarde para ter escolhas.",
+ "A paciência também é uma forma de força.",
+ "Hoje é uma nova oportunidade de fazer um pouco melhor."
+];
+async function ensureStarterQuotes(){
+ const [active]=await db.select({id:quotes.id}).from(quotes).where(eq(quotes.active,true)).limit(1);
+ if(active)return;
+ await db.transaction(async tx=>{
+  await tx.execute(sql`select pg_advisory_xact_lock(9102026)`);
+  const [existing]=await tx.select({id:quotes.id}).from(quotes).where(eq(quotes.active,true)).limit(1);
+  if(!existing)await tx.insert(quotes).values(starterQuotes.map((text,i)=>({text,color:i%2?"#FB923C":"#E11D48",animation:i%3===0?"pulse":i%3===1?"fade":"gradient",author:"Forge",active:true})));
+ });
+}
 coreRoutes.get("/quotes/today",async c=>{
- const [q]=await db.select().from(quotes).where(eq(quotes.active,true)).orderBy(desc(quotes.createdAt)).limit(1);
- return c.json(q??{text:"A disciplina de hoje constrói a liberdade de amanhã.",color:"#E11D48",animation:"fade",author:"Forge"});
+ await ensureStarterQuotes();
+ const active=await db.select().from(quotes).where(eq(quotes.active,true)).orderBy(desc(quotes.createdAt),desc(quotes.id));
+ const today=new Intl.DateTimeFormat("en-CA",{timeZone:process.env.APP_TIME_ZONE??"America/Sao_Paulo"}).format(new Date());
+ const day=Math.floor((Date.parse(today+"T00:00:00Z")-Date.parse(today.slice(0,4)+"-01-01T00:00:00Z"))/86400000);
+ return c.json(active.length?active[day%active.length]:{text:"A disciplina de hoje constrói a liberdade de amanhã.",color:"#E11D48",animation:"fade",author:"Forge"});
 });
 coreRoutes.get("/alarms",async c=>c.json(await db.select().from(alarms).where(eq(alarms.userId,c.get("user").id))));
 async function validateAlarmLinks(userId:string,b:any){
@@ -151,6 +249,37 @@ async function validateAlarmLinks(userId:string,b:any){
 coreRoutes.post("/alarms",async c=>{const b=alarmSchema.parse(await c.req.json()),uid=c.get("user").id;if(Boolean(b.parentAlarmId)!==Boolean(b.overrideDate))return c.json({error:{code:"INVALID_OVERRIDE",message:"Uma exceção precisa ter alarme base e data definidos."}},400);if(!await validateAlarmLinks(uid,b))return c.json({error:{code:"INVALID_ALARM_LINK",message:"O hábito ou alarme de referência não pertence à sua conta."}},400);const [r]=await db.insert(alarms).values({...b,userId:uid,overrideDate:b.overrideDate??null,parentAlarmId:b.parentAlarmId??null,habitId:b.habitId??null}).returning();return c.json(r,201);});
 coreRoutes.patch("/alarms/:id",async c=>{const b=alarmSchema.partial().parse(await c.req.json()),uid=c.get("user").id;if(!Object.keys(b).length)return c.json({error:{code:"EMPTY_UPDATE",message:"Informe ao menos um campo."}},400);const [old]=await db.select().from(alarms).where(and(eq(alarms.id,c.req.param("id")),eq(alarms.userId,uid))).limit(1);if(!old)return c.json({error:{code:"NOT_FOUND",message:"Alarme não encontrado."}},404);const merged={...old,...b};if(Boolean(merged.parentAlarmId)!==Boolean(merged.overrideDate))return c.json({error:{code:"INVALID_OVERRIDE",message:"Uma exceção precisa ter alarme base e data definidos."}},400);if(!await validateAlarmLinks(uid,merged))return c.json({error:{code:"INVALID_ALARM_LINK",message:"O hábito ou alarme de referência não pertence à sua conta."}},400);const [r]=await db.update(alarms).set(b).where(and(eq(alarms.id,c.req.param("id")),eq(alarms.userId,uid))).returning();return c.json(r);});
 coreRoutes.delete("/alarms/:id",async c=>{const uid=c.get("user").id,id=c.req.param("id");await db.delete(alarms).where(and(eq(alarms.id,id),eq(alarms.userId,uid)));await db.delete(alarms).where(and(eq(alarms.parentAlarmId,id),eq(alarms.userId,uid)));return c.json({ok:true});});
+
+
+const financeMonth=(value:string|undefined)=>{
+ const month=value??new Intl.DateTimeFormat("en-CA",{timeZone:process.env.APP_TIME_ZONE??"America/Sao_Paulo",year:"numeric",month:"2-digit"}).format(new Date()).slice(0,7);
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))return null;
+ const [year,monthNumber]=month.split("-").map(Number);
+ const next=new Date(Date.UTC(year,monthNumber,1)).toISOString().slice(0,10);
+ return {month,start:`${month}-01`,next};
+};
+coreRoutes.get("/finance",async c=>{
+ const period=financeMonth(c.req.query("month"));if(!period)return c.json({error:{code:"INVALID_MONTH",message:"Informe o mês no formato AAAA-MM."}},400);
+ const rows=await db.select().from(financeTransactions).where(and(eq(financeTransactions.userId,c.get("user").id),gte(financeTransactions.occurredAt,period.start),lt(financeTransactions.occurredAt,period.next))).orderBy(desc(financeTransactions.occurredAt),desc(financeTransactions.createdAt));
+ const income=rows.filter(x=>x.type==="income").reduce((s,x)=>s+Number(x.amount),0),expense=rows.filter(x=>x.type==="expense").reduce((s,x)=>s+Number(x.amount),0);
+ const totals=rows.filter(x=>x.type==="expense").reduce((acc:Record<string,number>,x)=>{acc[x.category]=(acc[x.category]??0)+Number(x.amount);return acc;},{});
+ const categories=Object.entries(totals).map(([category,amount])=>({category,amount:Number(amount.toFixed(2))})).sort((a,b)=>b.amount-a.amount);
+ return c.json({month:period.month,income:Number(income.toFixed(2)),expenses:Number(expense.toFixed(2)),balance:Number((income-expense).toFixed(2)),transactions:rows,categories});
+});
+coreRoutes.post("/finance",async c=>{
+ const b=financeTransactionSchema.parse(await c.req.json());
+ const [row]=await db.insert(financeTransactions).values({...b,userId:c.get("user").id,amount:b.amount.toFixed(2),description:b.description||null}).returning();
+ return c.json(row,201);
+});
+coreRoutes.patch("/finance/:id",async c=>{
+ const b=financeTransactionSchema.partial().parse(await c.req.json());if(!Object.keys(b).length)return c.json({error:{code:"EMPTY_UPDATE",message:"Informe ao menos um campo."}},400);
+ const [row]=await db.update(financeTransactions).set({...b,amount:b.amount===undefined?undefined:b.amount.toFixed(2),description:b.description===undefined?undefined:(b.description||null)}).where(and(eq(financeTransactions.id,c.req.param("id")),eq(financeTransactions.userId,c.get("user").id))).returning();
+ return row?c.json(row):c.json({error:{code:"NOT_FOUND",message:"Lançamento não encontrado."}},404);
+});
+coreRoutes.delete("/finance/:id",async c=>{
+ const [row]=await db.delete(financeTransactions).where(and(eq(financeTransactions.id,c.req.param("id")),eq(financeTransactions.userId,c.get("user").id))).returning({id:financeTransactions.id});
+ return row?c.json({ok:true}):c.json({error:{code:"NOT_FOUND",message:"Lançamento não encontrado."}},404);
+});
 
 coreRoutes.get("/admin/users",adminOnly,async c=>c.json(await db.select({id:users.id,name:users.name,email:users.email,role:users.role,active:users.active,createdAt:users.createdAt}).from(users).orderBy(desc(users.createdAt))));
 coreRoutes.patch("/admin/users/:id",adminOnly,async c=>{
@@ -166,9 +295,10 @@ coreRoutes.get("/admin/metrics",adminOnly,async c=>{
  const [u]=await db.select({count:sql<number>`count(*)`}).from(users);
  const [h]=await db.select({count:sql<number>`count(*)`}).from(habits);
  const [s]=await db.select({total:sql<number>`coalesce(sum(case when type='deposit' then amount::numeric else -amount::numeric end),0)`}).from(savingsEntries);
- return c.json({users:Number(u.count),habits:Number(h.count),netSavings:Number(s.total)});
+ const [f]=await db.select({income:sql<number>`coalesce(sum(case when type='income' then amount::numeric else 0 end),0)`,expenses:sql<number>`coalesce(sum(case when type='expense' then amount::numeric else 0 end),0)`}).from(financeTransactions);
+ return c.json({users:Number(u.count),habits:Number(h.count),netSavings:Number(s.total),financeIncome:Number(f.income),financeExpenses:Number(f.expenses)});
 });
-coreRoutes.get("/admin/quotes",adminOnly,async c=>c.json(await db.select().from(quotes).orderBy(desc(quotes.createdAt))));
+coreRoutes.get("/admin/quotes",adminOnly,async c=>{await ensureStarterQuotes();return c.json(await db.select().from(quotes).orderBy(desc(quotes.createdAt),desc(quotes.id)));});
 coreRoutes.post("/admin/quotes",adminOnly,async c=>{const b=quoteSchema.parse(await c.req.json());const [r]=await db.insert(quotes).values(b).returning();return c.json(r,201);});
 coreRoutes.patch("/admin/quotes/:id",adminOnly,async c=>{const b=quoteSchema.partial().parse(await c.req.json());if(!Object.keys(b).length)return c.json({error:{code:"EMPTY_UPDATE",message:"Informe ao menos um campo."}},400);const [r]=await db.update(quotes).set(b).where(eq(quotes.id,c.req.param("id"))).returning();return r?c.json(r):c.json({error:{code:"NOT_FOUND",message:"Frase não encontrada."}},404);});
 coreRoutes.delete("/admin/quotes/:id",adminOnly,async c=>{await db.delete(quotes).where(eq(quotes.id,c.req.param("id")));return c.json({ok:true});});

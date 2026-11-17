@@ -1,0 +1,26 @@
+{
+  "name": "Forge - ambiente de testes Android",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [3000, 8787, 8081],
+  "portsAttributes": {
+    "3000": {
+      "label": "Forge Web",
+      "onAutoForward": "openBrowser",
+      "visibility": "private"
+    },
+    "8787": {
+      "label": "Forge API - teste temporário",
+      "onAutoForward": "notify",
+      "visibility": "private"
+    },
+    "8081": {
+      "label": "Expo Metro",
+      "onAutoForward": "notify",
+      "visibility": "private"
+    }
+  },
+  "postCreateCommand": "corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --frozen-lockfile && pnpm --filter @forge/shared build && node scripts/codespaces-init.mjs"
+}

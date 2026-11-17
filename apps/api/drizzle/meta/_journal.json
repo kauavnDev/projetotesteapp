@@ -2,6 +2,33 @@
   "version": "7",
   "dialect": "postgresql",
   "entries": [
-    { "idx": 0, "version": "7", "when": 1794830400000, "tag": "0000_forge_baseline", "breakpoints": true }
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794830400000,
+      "tag": "0000_forge_baseline",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794920400000,
+      "tag": "0001_finance_transactions",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795006800000,
+      "tag": "0002_friendships",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795093200000,
+      "tag": "0003_motivation_preference",
+      "breakpoints": true
+    }
   ]
 }
