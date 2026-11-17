@@ -7,7 +7,7 @@
 - [x] 11 verificações estáticas passaram.
 - [x] Snapshot Drizzle gerado e drift check sem migração adicional.
 - [x] Migrações 0000, 0001 e 0002 aplicadas em PostgreSQL 16 limpo.
-- [ ] 23 testes Vitest esperados após a inclusão dos testes de amizade; aguardando CI desta revisão.
+- [x] 23 testes Vitest passaram em 4 arquivos, incluindo CRUD financeiro, convites/aceite de amizade, ranking privado e biblioteca de frases.
 - [x] TypeScript passou nos workspaces.
 - [x] Build esbuild da API e build Next.js do painel passaram.
 - [ ] Build nativo Expo/APK e teste em Android físico.
@@ -67,8 +67,8 @@
 
 ## Amigos e ranking privado
 
-- [ ] Convite por e-mail, aceite/recusa, cancelamento e remoção de amizade.
-- [ ] Ranking inclui apenas o próprio usuário e amigos aceitos; não expõe outros usuários.
+- [x] Convite por e-mail, aceite/recusa, cancelamento e remoção de amizade (API e interface; fluxo automatizado).
+- [x] Ranking inclui apenas o próprio usuário e amigos aceitos; teste confirma que terceiros não aparecem.
 
 ## Mente e painel web
 
