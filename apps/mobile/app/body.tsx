@@ -1,12 +1,12 @@
 import {useEffect,useRef,useState} from "react";
 import {View,Text,TextInput,Pressable,StyleSheet,Alert,ScrollView,Switch,Image} from "react-native";
 import {CameraView,useCameraPermissions} from "expo-camera";
-import {api} from "../lib/api";
+import {api,API_BASE} from "../lib/api";
 import {useAuth} from "../store/auth";
 import {router} from "expo-router";
 
 type Photo={id:string;view:"front"|"side"|"back";takenAt:string};
-const API=process.env.EXPO_PUBLIC_API_URL||"http://localhost:8787/v1";
+const API=API_BASE;
 export default function Body(){
  const cameraRef=useRef<CameraView|null>(null),[permission,requestPermission]=useCameraPermissions();
  const [height,setHeight]=useState(""),[weight,setWeight]=useState(""),[camera,setCamera]=useState(false),[view,setView]=useState<"front"|"side"|"back">("front"),[photos,setPhotos]=useState<Photo[]>([]),[selectedPhotoIds,setSelectedPhotoIds]=useState<string[]>([]),[analyses,setAnalyses]=useState<any[]>([]),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false);

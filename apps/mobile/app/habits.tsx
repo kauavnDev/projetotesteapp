@@ -3,7 +3,7 @@ type Habit={id:string;title:string;time:string|null;frequency:string;days:number
 export default function Habits(){const [title,setTitle]=useState(""),[time,setTime]=useState("07:00"),[frequency,setFrequency]=useState("daily"),[days,setDays]=useState<number[]>([]),[items,setItems]=useState<Habit[]>([]),[editing,setEditing]=useState<string|null>(null);
  async function load(){try{setItems(await api("/habits"))}catch(e:any){Alert.alert("Erro",e.message)}}useEffect(()=>{load()},[]);
  async function save(){try{const body={title,time,frequency,days,color:"#E11D48"};await api(editing?`/habits/${editing}`:"/habits",{method:editing?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});setTitle("");setEditing(null);await load()}catch(e:any){Alert.alert("Confira",e.message)}}
- async function check(id:string){try{await Haptics.selectionAsync();await api(`/habits/${id}/check`,{method:"POST"});await load()}catch(e:any){Alert.alert("Erro",e.message)}}
+ async function check(id:string,completed:boolean){try{await Haptics.selectionAsync();await api(`/habits/${id}/check`,{method:completed?"DELETE":"POST"});await load()}catch(e:any){Alert.alert("Erro",e.message)}}
  async function remove(id:string){try{await api(`/habits/${id}`,{method:"DELETE"});await load()}catch(e:any){Alert.alert("Erro",e.message)}}
  function edit(h:Habit){setEditing(h.id);setTitle(h.title);setTime(h.time||"07:00");setFrequency(h.frequency);setDays(h.days||[])}
  function toggleDay(i:number){setDays(v=>v.includes(i)?v.filter(x=>x!==i):[...v,i].sort())}

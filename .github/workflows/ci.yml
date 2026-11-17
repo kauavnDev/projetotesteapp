@@ -1,0 +1,70 @@
+name: Forge CI
+
+on:
+  push:
+    branches: [main, "forge/**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: forge
+          POSTGRES_PASSWORD: forge_ci
+          POSTGRES_DB: forge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U forge -d forge"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://forge:forge_ci@localhost:5432/forge
+      JWT_ACCESS_SECRET: ci-only-access-secret-not-for-production-000000000000
+      JWT_REFRESH_SECRET: ci-only-refresh-secret-not-for-production-000000000000
+      ADMIN_EMAILS: admin1@example.com,admin2@example.com
+      CORS_ORIGINS: http://localhost:3000
+      APP_TIME_ZONE: America/Sao_Paulo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install workspace dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Build shared package
+        run: pnpm --filter @forge/shared build
+      - name: Static contract tests
+        run: |
+          node --test scripts/*.test.mjs
+          pnpm verify:static
+      - name: Apply PostgreSQL migrations
+        run: pnpm db:migrate
+      - name: Unit and database integration tests
+        run: pnpm test
+      - name: TypeScript checks
+        run: pnpm lint
+      - name: Production builds (without deployment)
+        run: pnpm build
+      - name: Save generated lockfile for repository bootstrap
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-bootstrap
+          path: pnpm-lock.yaml
+          if-no-files-found: warn

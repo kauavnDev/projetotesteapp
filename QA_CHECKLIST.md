@@ -1,49 +1,69 @@
-# Checklist de QA antes de produção
+# Checklist de QA do Forge
 
-## Ferramentas e build
-- [ ] `pnpm install` com rede e lockfile gerado/commitado.
-- [ ] `pnpm --filter @forge/shared build`, `pnpm lint`, `pnpm test` e `pnpm build` sem erros.
-- [ ] Verificar build Expo SDK 51 em Android e iOS.
+## Automação e ambiente
 
-## Banco e autenticação
-- [ ] Aplicar `pnpm db:migrate` em PostgreSQL limpo e confirmar todas as tabelas/índices.
-- [ ] Cadastro, login, bcrypt, access 15 min, refresh 30 dias, rotação concorrente e logout.
-- [ ] Testar allowlist com exatamente dois e-mails; usuário comum recebe 403 em todas as rotas admin.
-- [ ] Desativar conta e confirmar bloqueio de access e refresh tokens.
-- [ ] Testar rate limit atrás de proxy confiável e CORS com origem permitida/não permitida.
+- [ ] Dev Container abre no GitHub Codespaces usando somente o navegador Android.
+- [ ] PostgreSQL 16 do Codespaces fica saudável.
+- [ ] pnpm install, build do pacote shared, static checks, typecheck e builds passam.
+- [ ] pnpm db:migrate aplica a baseline em banco PostgreSQL limpo.
+- [ ] Teste de integração confirma as tabelas e a unicidade de conclusão diária.
+- [ ] pnpm-lock.yaml é versionado e a CI passa a usar instalação congelada.
 
-## Rotina, dinheiro e metas
-- [ ] CRUD de hábitos, frequência/dias, check diário idempotente (POST repetido não alterna estado), desmarcação via DELETE e streak em timezone configurado.
-- [ ] Testar depósitos de R$ 0,50 + R$ 0,50 = 1 ponto; retirada e exclusão/edit com saldo recalculado.
-- [ ] Confirmar retiradas sem motivo detalhado (mínimo 12 caracteres) são rejeitadas.
-- [ ] Confirmar operações concorrentes não produzem saldo negativo.
-- [ ] CRUD de metas e progresso com poupança líquida.
-- [ ] Diário da mente: CRUD e isolamento entre usuários.
+## Android e sessão
+
+- [ ] Confirmar qual Expo Go é compatível com SDK 51 ou gerar development build EAS.
+- [ ] Cadastro, login, refresh token após 15 minutos, rotação e logout.
+- [ ] Fechar/reabrir app e documentar comportamento da sessão em memória.
+- [ ] Testar navegação, layout, teclado, telas pequenas e tema claro/escuro.
+
+## Rotina
+
+- [ ] CRUD de hábitos, frequência/dias, horário, cor e streak.
+- [ ] Check repetido é idempotente; desmarcação remove o registro e os pontos.
+- [ ] Frequência personalizada exige pelo menos um dia.
+- [ ] Fuso horário e mudança de data perto da meia-noite.
 
 ## Alarmes e notificações
-- [ ] Permissões Android/iOS, canal Android e notificações com app fechado.
-- [ ] Confirmar recorrência diária/semanal e re-agendamento ao abrir a tela.
-- [ ] Confirmar exceção de data substitui o horário base sem duplicar notificação.
-- [ ] Testar fuso horário, horário de verão, app encerrado por vários dias e limite de 30 dias.
+
+- [ ] Permissões Android, canal de notificação e lembrete com app fechado.
+- [ ] Recorrência diária/semanal e exceção de data substitui o horário base.
+- [ ] Desativar/editar/excluir alarmes reprograma notificações.
+- [ ] Reabrir app após vários dias e renovar janela de 30 dias.
+- [ ] Confirmar limitações do Android para alarmes exatos e economia de bateria.
+
+## Dinheiro e metas
+
+- [ ] Depósitos e retiradas com centavos, motivo detalhado obrigatório e saldo não negativo.
+- [ ] Editar/excluir lançamentos recalcula saldo e pontos.
+- [ ] Operações concorrentes não geram saldo negativo.
+- [ ] R$ 1 líquido = 1 ponto; saldo de metas e ranking consistentes.
+- [ ] CRUD de metas e prazo.
 
 ## Corpo e privacidade
-- [ ] Upload JPG/PNG/WebP válido, arquivo disfarçado, arquivo corrompido e tamanho excedido.
-- [ ] Acessar/deletar foto de outro usuário deve retornar 404/403.
-- [ ] Verificar diretório fora do webroot, permissões 0700/0600, volume persistente e backup.
-- [ ] Análise sem consentimento deve falhar; sem chave retorna 503; com chave e consentimento testa provedor.
-- [ ] Confirmar a resposta não faz diagnóstico nem estima medidas/percentual de gordura.
-- [ ] Testar exclusão de foto referenciada por análise e política de retenção.
 
-## Admin e interfaces
-- [ ] CRUD de frases com texto, cor, animação e autor.
-- [ ] Ativar/desativar usuário e validar sessão revogada no próximo request.
-- [ ] Métricas agregadas e ranking consistentes.
-- [ ] Testar painel web em mobile/desktop e aplicativo móvel em aparelho físico.
-- [ ] Validar acessibilidade, temas claro/escuro, feedback tátil e animações.
+- [ ] Perfil altura/peso valida limites.
+- [ ] Upload JPG/PNG/WebP, arquivo disfarçado/corrompido e tamanho excedido.
+- [ ] Foto de outro usuário retorna 404/403; diretório fica fora do webroot.
+- [ ] Diretórios 0700, arquivos 0600, acesso autenticado e cache privado.
+- [ ] Timeline, seleção, comparação antes/depois e exclusão.
+- [ ] Análise sem consentimento falha; sem chave retorna 503; com chave e consentimento valida provedor.
+- [ ] Confirmar que a análise não estima medidas, percentual de gordura nem diagnóstico.
+- [ ] Política de retenção/exclusão de análises ligadas a fotos removidas.
 
-## Deploy
-- [ ] Configurar secrets sem versionar `.env`.
-- [ ] Configurar storage privado persistente/bucket privado; armazenamento local efêmero não é aceitável.
-- [ ] Configurar rate limit compartilhado Redis/KV para múltiplas instâncias.
-- [ ] Backup e restauração do banco e fotos; política de retenção e exclusão.
-- [ ] Nenhum deploy sem autorização explícita.
+## Mente e painel web
+
+- [ ] CRUD do diário e isolamento entre usuários.
+- [ ] Login web, refresh token e logout.
+- [ ] Painel usuário em celular/desktop.
+- [ ] Edição/exclusão web de hábitos, poupança, metas e diário.
+- [ ] Timeline de fotos e alarmes na interface web.
+- [ ] Admin: allowlist de exatamente dois e-mails, CRUD de frases, usuários e métricas.
+- [ ] Usuário comum recebe 403 em todas as rotas admin; contas desativadas perdem acesso.
+
+## Deploy — bloqueado sem autorização
+
+- [ ] Banco gerenciado, secrets, CORS e rate limit compartilhado.
+- [ ] Bucket/volume privado persistente e backup/restauração.
+- [ ] Limites de upload no proxy, retenção e exclusão de dados.
+- [ ] Teste Android/iOS físico e build EAS.
+- [ ] Nenhum deploy de produção ou gasto sem autorização explícita.

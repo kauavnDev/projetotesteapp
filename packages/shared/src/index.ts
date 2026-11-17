@@ -10,6 +10,10 @@ export const habitSchema = z.object({
   days: z.array(z.number().int().min(0).max(6)).max(7).default([]),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().default(null),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#E11D48")
+}).superRefine((value,ctx)=>{
+  if(value.frequency==="custom"&&value.days.length===0){
+    ctx.addIssue({code:"custom",path:["days"],message:"Selecione ao menos um dia para a frequência personalizada."});
+  }
 });
 export const savingsSchema = z.object({
   type: z.enum(["deposit","withdrawal"]),
