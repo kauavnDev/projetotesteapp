@@ -197,7 +197,7 @@ coreRoutes.delete("/alarms/:id",async c=>{const uid=c.get("user").id,id=c.req.pa
 
 const financeMonth=(value:string|undefined)=>{
  const month=value??new Intl.DateTimeFormat("en-CA",{timeZone:process.env.APP_TIME_ZONE??"America/Sao_Paulo",year:"numeric",month:"2-digit"}).format(new Date()).slice(0,7);
- if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))return null;
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))return null;
  return {month,start:`${month}-01`,end:`${month}-31`};
 };
 coreRoutes.get("/finance",async c=>{
