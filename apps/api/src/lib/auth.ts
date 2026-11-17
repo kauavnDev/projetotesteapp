@@ -27,7 +27,7 @@ export async function readRefreshToken(token:string) { return jwtVerify(token,re
 export async function readAccessToken(token:string) { return jwtVerify(token,accessSecret()); }
 function configuredAdminEmails():string[] {
   const emails=(process.env.ADMIN_EMAILS??"").split(",").map(v=>v.trim().toLowerCase()).filter(Boolean);
-  if(emails.length!==2 || new Set(emails).size!==2 || emails.some(email=>!/^\\S+@\\S+\\.\\S+$/.test(email))) return [];
+  if(emails.length!==2 || new Set(emails).size!==2 || emails.some(email=>!/^\S+@\S+\.\S+$/.test(email))) return [];
   return emails;
 }
 export function isAdminEmail(email:string) {
