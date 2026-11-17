@@ -44,4 +44,8 @@ test('Codespaces ports stay private and setup targets the tested branch',async()
  assert.ok(init.includes('??""'));
  const apiEnv=await read('apps/api/.env.example');
  assert.match(apiEnv,/^ADMIN_EMAILS=$/m);
+ const eas=JSON.parse(await read('apps/mobile/eas.json'));
+ assert.equal(eas.build.preview.distribution,'internal');
+ assert.equal(eas.build.preview.android.buildType,'apk');
+ assert.equal(eas.build.development,undefined);
 });
