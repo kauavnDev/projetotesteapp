@@ -25,7 +25,6 @@ const nav: { id: Section; label: string; icon: string }[] = [
   { id: "avatar", label: "Meu personagem", icon: "♙" },
 ];
 
-const avatarHeads = ["◉", "●", "◍", "◌"];
 const avatarHair = ["Corte clássico", "Degradê", "Cacheado", "Longo"];
 const avatarColors = ["#f5b78f", "#d99670", "#8b5b43", "#f0d0b2"];
 const avatarFits = ["Jaqueta", "Moletom", "Esportivo", "Minimalista"];
@@ -53,7 +52,18 @@ export default function ForgeV2() {
   const [avatarName, setAvatarName] = useState("Minha evolução");
   const [dark, setDark] = useState(true);
 
-  useEffect(() => {\n    const preference = window.localStorage.getItem("forge-v2:show-motivation");\n    setShowWelcome(preference !== "false");\n    setShowWelcomeNext(preference !== "false");\n  }, []);\n\n  function startDay() {\n    window.localStorage.setItem("forge-v2:show-motivation", showWelcomeNext ? "true" : "false");\n    setShowWelcome(false);\n  }\n\n  const doneCount = habits.filter((h) => h.done).length;
+  useEffect(() => {
+    const preference = window.localStorage.getItem("forge-v2:show-motivation");
+    setShowWelcome(preference !== "false");
+    setShowWelcomeNext(preference !== "false");
+  }, []);
+
+  function startDay() {
+    window.localStorage.setItem("forge-v2:show-motivation", showWelcomeNext ? "true" : "false");
+    setShowWelcome(false);
+  }
+
+  const doneCount = habits.filter((h) => h.done).length;
   const progress = habits.length ? Math.round((doneCount / habits.length) * 100) : 0;
   const balance = useMemo(() => Math.max(0, Number(income || 0) - Number(expense || 0)), [income, expense]);
   const savedProgress = Math.min(100, Math.round((Number(saved || 0) / Math.max(1, Number(goal || 1))) * 100));
