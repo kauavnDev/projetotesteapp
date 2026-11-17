@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Section = "inicio" | "rotina" | "financas" | "corpo" | "mente" | "avatar";
 type Habit = { id: number; title: string; time: string; done: boolean };
@@ -32,7 +32,7 @@ const avatarFits = ["Jaqueta", "Moletom", "Esportivo", "Minimalista"];
 
 export default function ForgeV2() {
   const [section, setSection] = useState<Section>("inicio");
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [showWelcomeNext, setShowWelcomeNext] = useState(true);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [habits, setHabits] = useState(initialHabits);
@@ -53,7 +53,7 @@ export default function ForgeV2() {
   const [avatarName, setAvatarName] = useState("Minha evolução");
   const [dark, setDark] = useState(true);
 
-  const doneCount = habits.filter((h) => h.done).length;
+  useEffect(() => {\n    const preference = window.localStorage.getItem("forge-v2:show-motivation");\n    setShowWelcome(preference !== "false");\n    setShowWelcomeNext(preference !== "false");\n  }, []);\n\n  function startDay() {\n    window.localStorage.setItem("forge-v2:show-motivation", showWelcomeNext ? "true" : "false");\n    setShowWelcome(false);\n  }\n\n  const doneCount = habits.filter((h) => h.done).length;
   const progress = habits.length ? Math.round((doneCount / habits.length) * 100) : 0;
   const balance = useMemo(() => Math.max(0, Number(income || 0) - Number(expense || 0)), [income, expense]);
   const savedProgress = Math.min(100, Math.round((Number(saved || 0) / Math.max(1, Number(goal || 1))) * 100));
@@ -82,7 +82,7 @@ export default function ForgeV2() {
             <h1>{quotes[quoteIndex]}</h1>
             <p className="welcome-sub">Pequenas atitudes. Progresso real. Uma versão sua que você vai ter orgulho de conhecer.</p>
             <div className="welcome-actions">
-              <button className="primary-button" onClick={() => setShowWelcome(false)}>Começar meu dia <span>↗</span></button>
+              <button className="primary-button" onClick={startDay}>Começar meu dia <span>↗</span></button>
               <button className="quiet-button" onClick={() => setQuoteIndex((quoteIndex + 1) % quotes.length)}>Outra mensagem ↻</button>
             </div>
             <label className="welcome-choice"><input type="checkbox" checked={showWelcomeNext} onChange={(e) => setShowWelcomeNext(e.target.checked)} /> Mostrar esta página quando eu abrir o Forge</label>
