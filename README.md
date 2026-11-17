@@ -108,6 +108,7 @@ O snapshot inicial do Drizzle está versionado em apps/api/drizzle/meta/0000_sna
 - Cadastro/login, hash bcrypt, access token de 15 minutos, refresh token de 30 dias com hash, rotação e revogação.
 - Autorização recalculada no servidor a partir de ADMIN_EMAILS; contas desativadas são bloqueadas.
 - Hábitos com frequência, dias, horário, cor, conclusão diária idempotente e sequência calculada.
+- Finanças mensais com entradas, despesas, categorias, saldo, histórico editável e exclusão; cofrinho separado para depósitos/retiradas, pontos e metas.
 - Poupança com depósitos, retiradas com motivo detalhado, edição/exclusão, saldo e pontos (R$ 1 líquido = 1 ponto); alterações financeiras usam lock transacional por usuário.
 - Metas com valor-alvo, prazo e progresso baseado no saldo poupado.
 - Ranking, ledger de pontos e frase do dia.
@@ -115,11 +116,11 @@ O snapshot inicial do Drizzle está versionado em apps/api/drizzle/meta/0000_sna
 - Alarmes locais recorrentes e exceções por data; o app agenda os próximos 30 dias no dispositivo quando a tela de alarmes é aberta.
 - Perfil corporal com altura/peso, fotos privadas JPG/PNG/WebP, timeline/antes-depois no mobile e exclusão por proprietário.
 - Análise visual por IA apenas com consent: true, fotos do próprio usuário e OPENAI_API_KEY configurada. A resposta é não médica e não deve estimar medidas, gordura ou diagnóstico.
-- Administração de usuários, frases (texto, cor, autor, animação) e métricas, protegida por allowlist no servidor.
+- Biblioteca inicial de 30 frases motivacionais com rotação diária; administração de usuários, frases (texto, cor, autor, animação) e métricas, protegida por allowlist no servidor.
 
 ## Limitações conhecidas — não considerar como testadas
 
-- A tela web concentra o acesso em uma página e ainda não oferece toda a edição/exclusão disponível no mobile; a timeline corporal e o agendamento de alarmes ainda precisam de uma experiência web completa.
+- A tela web concentra o acesso em uma página; finanças, cofrinho e metas estão disponíveis, mas a timeline corporal e o agendamento de alarmes ainda precisam de uma experiência web completa.
 - Notificações são locais no dispositivo; não há serviço de push remoto configurado.
 - Fotos ficam em disco privado local por padrão. Isso serve para desenvolvimento/teste em um único servidor persistente, não para produção serverless. Produção exige bucket privado/volume persistente, backup, retenção e políticas de acesso.
 - Análise por IA retorna 503 AI_NOT_CONFIGURED sem OPENAI_API_KEY. Não há chave incluída nem análise validada aqui.
