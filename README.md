@@ -16,7 +16,7 @@ Aplicativo pessoal em português do Brasil para acompanhar **Rotina, Dinheiro, C
 O repositório inclui um Dev Container para abrir o projeto no GitHub Codespaces, sem instalar Node ou PostgreSQL no celular.
 
 1. Abra [o repositório Forge](https://github.com/kauavnDev/projetotesteapp) no Chrome.
-2. No botão **Code**, abra **Codespaces** e crie um Codespace na branch main.
+2. No botão **Code**, abra **Codespaces** e crie um Codespace na branch `forge/qa-foundation-2026-11-17` (a branch da PR #1). **Não escolha `main` ainda**: a configuração de Codespaces e o lockfile estão nessa branch e a PR ainda não foi mesclada.
 3. Aguarde a preparação do Dev Container. Ele instala pnpm/dependências e inicia um PostgreSQL 16 local no Codespace.
 4. O script scripts/codespaces-init.mjs cria arquivos locais ignorados pelo Git e configura a URL encaminhada da API para o Android.
 5. Abra a aba **Ports** do Codespaces e confira:
@@ -50,7 +50,7 @@ pnpm --filter @forge/mobile dev
 
 Se o QR code não conectar ao celular, tente iniciar o Expo com pnpm --filter @forge/mobile dev -- --tunnel. O túnel pode exigir que o Expo instale o pacote auxiliar. Abra o painel web pela porta 3000 e use o Expo Go no Android para abrir o projeto.
 
-**Compatibilidade Expo Go:** o projeto usa SDK 51. O Expo Go atual pode não aceitar essa versão antiga. Consulte [expo.dev/go](https://expo.dev/go) e selecione uma versão compatível com SDK 51, se ainda estiver disponível. Se não estiver, será necessário gerar um development/preview build com EAS; isso exige uma conta Expo e ainda não foi configurado nem testado neste projeto. Não atualize o SDK às pressas: a migração de versão precisa ser feita e validada separadamente.
+**Compatibilidade Expo Go (17/11/2026):** o projeto usa SDK 51, enquanto o seletor oficial atualmente mostra SDK 58 como versão mais recente. A versão instalada pela Play Store não deve ser presumida compatível. No Android, abra [expo.dev/go](https://expo.dev/go), escolha SDK 51 e instale a versão correspondente, se o seletor ainda a disponibilizar. O Expo Go aceita apenas a versão de SDK incluída naquela build; consulte [a documentação de incompatibilidade](https://docs.expo.dev/troubleshooting/expo-go-version-mismatch/). Se SDK 51 não estiver disponível ou algum módulo nativo não funcionar no Expo Go, use um APK de preview: o perfil `preview` em `apps/mobile/eas.json` está configurado para APK e pode ser gerado com `npx eas-cli build --platform android --profile preview`. Isso exige conta Expo e login no Codespace; não há credenciais salvas e nenhum build foi solicitado ainda. Não atualize o SDK às pressas: migre uma versão por vez e valide os módulos nativos.
 
 **Segurança do Codespaces:** as portas 8787 e 8081 começam privadas. Torne-as públicas somente durante a conexão do Android/Expo Go e volte para Private ao terminar. Use apenas dados fictícios, fotos de teste e um Codespace temporário; não coloque fotos pessoais ou credenciais reais nesse ambiente.
 
