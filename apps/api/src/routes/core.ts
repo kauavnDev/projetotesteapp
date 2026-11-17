@@ -138,9 +138,51 @@ coreRoutes.get("/leaderboard",async c=>{
  const rows=await db.select({id:users.id,name:users.name,points:sql<number>`coalesce(sum(${pointsLedger.points}),0)`}).from(users).leftJoin(pointsLedger,eq(users.id,pointsLedger.userId)).where(eq(users.active,true)).groupBy(users.id).orderBy(sql`coalesce(sum(${pointsLedger.points}),0) desc`).limit(100);
  return c.json(rows.map((r,i)=>({...r,position:i+1})));
 });
+const starterQuotes=[
+ "Você não precisa vencer o ano hoje. Só precisa cumprir o próximo passo.",
+ "Disciplina é escolher o que você quer mais, em vez do que quer agora.",
+ "O progresso silencioso também é progresso. Continue.",
+ "Não compare seu capítulo 2 com o capítulo 20 de outra pessoa.",
+ "Pequenas escolhas repetidas viram grandes mudanças.",
+ "Faça por você, inclusive nos dias em que ninguém estiver olhando.",
+ "Consistência vence intensidade quando a intensidade não dura.",
+ "Seu futuro é construído no que você faz quando a motivação acaba.",
+ "Um erro não apaga o caminho. Aprenda, ajuste e recomece.",
+ "Cuide do corpo que carrega seus sonhos.",
+ "Guardar pouco ainda é guardar. O hábito vale muito.",
+ "Seu dinheiro precisa de direção, não de aparência.",
+ "Não é sobre nunca cair. É sobre aprender a levantar melhor.",
+ "A versão que você quer ser depende das escolhas de hoje.",
+ "Respeite seu ritmo, mas não abandone sua caminhada.",
+ "Você pode começar de novo sem começar do zero.",
+ "Foco é dizer sim ao que importa e não ao que distrai.",
+ "Não espere confiança para agir. A confiança cresce com a prática.",
+ "O descanso também faz parte de uma rotina sustentável.",
+ "Cada hábito concluído é um voto na pessoa que você está construindo.",
+ "Planeje com coragem. Execute com calma. Revise sem culpa.",
+ "Seu valor não é medido por um dia ruim.",
+ "A evolução real acontece quando ninguém está aplaudindo.",
+ "Transforme metas grandes em passos pequenos e possíveis.",
+ "Aproveite o que conquistou sem perder de vista o que deseja construir.",
+ "Você não controla tudo, mas pode escolher seu próximo movimento.",
+ "Uma rotina boa é aquela que cabe na vida real.",
+ "Não gaste para impressionar. Guarde para ter escolhas.",
+ "A paciência também é uma forma de força.",
+ "Hoje é uma nova oportunidade de fazer um pouco melhor."
+];
 coreRoutes.get("/quotes/today",async c=>{
- const [q]=await db.select().from(quotes).where(eq(quotes.active,true)).orderBy(desc(quotes.createdAt)).limit(1);
- return c.json(q??{text:"A disciplina de hoje constrói a liberdade de amanhã.",color:"#E11D48",animation:"fade",author:"Forge"});
+ let active=await db.select().from(quotes).where(eq(quotes.active,true)).orderBy(desc(quotes.createdAt));
+ if(!active.length){
+  await db.transaction(async tx=>{
+   await tx.execute(sql`select pg_advisory_xact_lock(9102026)`);
+   const [existing]=await tx.select({id:quotes.id}).from(quotes).where(eq(quotes.active,true)).limit(1);
+   if(!existing)await tx.insert(quotes).values(starterQuotes.map((text,i)=>({text,color:i%2?"#FB923C":"#E11D48",animation:i%3===0?"pulse":i%3===1?"fade":"gradient",author:"Forge",active:true})));
+  });
+  active=await db.select().from(quotes).where(eq(quotes.active,true)).orderBy(desc(quotes.createdAt));
+ }
+ const today=new Intl.DateTimeFormat("en-CA",{timeZone:process.env.APP_TIME_ZONE??"America/Sao_Paulo"}).format(new Date());
+ const day=Math.floor((Date.parse(today+"T00:00:00Z")-Date.parse(today.slice(0,4)+"-01-01T00:00:00Z"))/86400000);
+ return c.json(active.length?active[day%active.length]:{text:"A disciplina de hoje constrói a liberdade de amanhã.",color:"#E11D48",animation:"fade",author:"Forge"});
 });
 coreRoutes.get("/alarms",async c=>c.json(await db.select().from(alarms).where(eq(alarms.userId,c.get("user").id))));
 async function validateAlarmLinks(userId:string,b:any){
@@ -162,7 +204,8 @@ coreRoutes.get("/finance",async c=>{
  const period=financeMonth(c.req.query("month"));if(!period)return c.json({error:{code:"INVALID_MONTH",message:"Informe o mês no formato AAAA-MM."}},400);
  const rows=await db.select().from(financeTransactions).where(and(eq(financeTransactions.userId,c.get("user").id),gte(financeTransactions.occurredAt,period.start),sql`${financeTransactions.occurredAt} <= ${period.end}`)).orderBy(desc(financeTransactions.occurredAt),desc(financeTransactions.createdAt));
  const income=rows.filter(x=>x.type==="income").reduce((s,x)=>s+Number(x.amount),0),expense=rows.filter(x=>x.type==="expense").reduce((s,x)=>s+Number(x.amount),0);
- const categories=Object.values(rows.reduce((acc:any,x)=>{if(x.type==="expense")acc[x.category]=(acc[x.category]??0)+Number(x.amount);return acc;},{})).map((amount:any,i)=>({category:Object.keys(rows.filter(x=>x.type==="expense").reduce((acc:any,x)=>{acc[x.category]=(acc[x.category]??0)+Number(x.amount);return acc;},{}))[i],amount}));
+ const totals=rows.filter(x=>x.type==="expense").reduce((acc:Record<string,number>,x)=>{acc[x.category]=(acc[x.category]??0)+Number(x.amount);return acc;},{});
+ const categories=Object.entries(totals).map(([category,amount])=>({category,amount:Number(amount.toFixed(2))})).sort((a,b)=>b.amount-a.amount);
  return c.json({month:period.month,income:Number(income.toFixed(2)),expenses:Number(expense.toFixed(2)),balance:Number((income-expense).toFixed(2)),transactions:rows,categories});
 });
 coreRoutes.post("/finance",async c=>{
