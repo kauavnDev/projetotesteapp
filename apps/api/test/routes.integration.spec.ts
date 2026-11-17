@@ -167,8 +167,8 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     expect((await update.json()).showMotivationOnOpen).toBe(false);
     const persisted = await app.request("/v1/preferences", { headers });
     expect((await persisted.json()).showMotivationOnOpen).toBe(false);
-    const stranger = await app.request("/v1/preferences", { headers: { Authorization: `Bearer ${stranger.accessToken}` } });
-    expect((await stranger.json()).showMotivationOnOpen).toBe(true);
+    const strangerPrefs = await app.request("/v1/preferences", { headers: { Authorization: `Bearer ${stranger.accessToken}` } });
+    expect((await strangerPrefs.json()).showMotivationOnOpen).toBe(true);
     const invalid = await app.request("/v1/preferences", { method: "PATCH", headers, body: JSON.stringify({ showMotivationOnOpen: "false" }) });
     expect(invalid.status).toBe(400);
   });
