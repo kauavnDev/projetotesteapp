@@ -19,7 +19,8 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
   const originalSecrets = {
     access: process.env.JWT_ACCESS_SECRET,
     refresh: process.env.JWT_REFRESH_SECRET,
-    admins: process.env.ADMIN_EMAILS
+    admins: process.env.ADMIN_EMAILS,
+    privateDir: process.env.PRIVATE_UPLOAD_DIR
   };
   const userIds: string[] = [];
 
@@ -67,6 +68,8 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     if (userIds.length && db && users) await db.delete(users).where(inArray(users.id, userIds));
     if (pool) await pool.end();
     if (privateDir) await rm(privateDir, { recursive: true, force: true });
+    if (originalSecrets.privateDir === undefined) delete process.env.PRIVATE_UPLOAD_DIR;
+    else process.env.PRIVATE_UPLOAD_DIR = originalSecrets.privateDir;
     if (originalSecrets.access === undefined) delete process.env.JWT_ACCESS_SECRET;
     else process.env.JWT_ACCESS_SECRET = originalSecrets.access;
     if (originalSecrets.refresh === undefined) delete process.env.JWT_REFRESH_SECRET;
