@@ -138,7 +138,7 @@ pnpm build
 pnpm db:migrate
 ~~~
 
-Na execução de 17/11/2026, a CI passou: 7 testes Node de contrato, 11 verificações estáticas, 13 testes Vitest (incluindo integração real com PostgreSQL 16), migração baseline, typecheck de todos os workspaces e builds da API e do painel Next.js. O build nativo Expo/APK não faz parte dessa validação. Isso não substitui testes no Android físico nem valida provedor de IA ou armazenamento de produção.
+Na execução de 17/11/2026, a CI passou: 8 testes Node de contrato, 11 verificações estáticas, 19 testes Vitest (regras de negócio, allowlist administrativa, migrações PostgreSQL e integração de rotas para alarmes, upload privado, isolamento por usuário e consentimento da análise), migração baseline, typecheck de todos os workspaces e builds da API e do painel Next.js. O build nativo Expo/APK não faz parte dessa validação. Isso não substitui testes no Android físico nem valida o provedor de IA ou armazenamento de produção.
 
 ## Segurança e deploy
 
@@ -146,7 +146,7 @@ Variáveis relevantes:
 
 - DATABASE_URL, DB_POOL_MAX
 - JWT_ACCESS_SECRET, JWT_REFRESH_SECRET (mínimo de 32 caracteres, diferentes entre si)
-- ADMIN_EMAILS (somente os dois e-mails autorizados)
+- ADMIN_EMAILS (exatamente dois e-mails válidos e distintos; se a lista estiver incompleta, duplicada ou inválida, a aplicação falha de forma fechada e ninguém recebe acesso admin)
 - CORS_ORIGINS (origens exatas, separadas por vírgula)
 - APP_TIME_ZONE, UPLOAD_MAX_MB, PRIVATE_UPLOAD_DIR
 - OPENAI_API_KEY, OPENAI_MODEL (opcionais)
