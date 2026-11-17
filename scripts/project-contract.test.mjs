@@ -33,3 +33,13 @@ test('alarm exceptions are attached to a base and scheduled locally',async()=>{
  const core=await read('apps/api/src/routes/core.ts'),mobile=await read('apps/mobile/app/alarms.tsx');
  assert.ok(core.includes('INVALID_OVERRIDE'));assert.ok(mobile.includes('parentAlarmId'));assert.ok(mobile.includes('scheduleNotificationAsync'));
 });
+
+test('Codespaces ports stay private and setup targets the tested branch',async()=>{
+ const config=JSON.parse(await read('.devcontainer/devcontainer.json'));
+ for(const port of ['3000','8787','8081']) assert.equal(config.portsAttributes[port].visibility,'private',`port ${port} must be private by default`);
+ const readme=await read('README.md');
+ assert.ok(readme.includes('forge/qa-foundation-2026-11-17'));
+ assert.ok(readme.includes('Não escolha `main` ainda'));
+ const init=await read('scripts/codespaces-init.mjs');
+ assert.ok(init.includes('admin1@example.invalid,admin2@example.invalid'));
+});
