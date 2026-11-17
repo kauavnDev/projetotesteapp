@@ -22,5 +22,5 @@
       "visibility": "public"
     }
   },
-  "postCreateCommand": "corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --no-frozen-lockfile && pnpm --filter @forge/shared build && node scripts/codespaces-init.mjs"
+  "postCreateCommand": "corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --frozen-lockfile && pnpm --filter @forge/shared build && node scripts/codespaces-init.mjs"
 }

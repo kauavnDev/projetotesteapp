@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
@@ -46,31 +46,15 @@ jobs:
         with:
           node-version: 22
       - name: Install workspace dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Build shared package
         run: pnpm --filter @forge/shared build
       - name: Static contract tests
         run: |
           node --test scripts/*.test.mjs
           pnpm verify:static
-      - name: Bootstrap Drizzle snapshot when absent
-        run: |
-          if [ ! -f apps/api/drizzle/meta/0000_snapshot.json ]; then
-            cat > apps/api/drizzle-snapshot.config.ts <<'EOF'
-          import "dotenv/config";
-          import { defineConfig } from "drizzle-kit";
-          export default defineConfig({
-            schema: "./src/db/schema.ts",
-            out: "./drizzle-snapshot",
-            dialect: "postgresql",
-            dbCredentials: { url: process.env.DATABASE_URL! }
-          });
-          EOF
-            pnpm --filter @forge/api exec drizzle-kit generate --config=drizzle-snapshot.config.ts --name=forge_baseline
-            test -f apps/api/drizzle-snapshot/meta/0000_snapshot.json
-            cp apps/api/drizzle-snapshot/meta/0000_snapshot.json apps/api/drizzle/meta/0000_snapshot.json
-            rm -rf apps/api/drizzle-snapshot apps/api/drizzle-snapshot.config.ts
-          fi
+      - name: Verify Drizzle snapshot exists
+        run: test -f apps/api/drizzle/meta/0000_snapshot.json
       - name: Check Drizzle schema drift
         run: |
           before="$(find apps/api/drizzle -maxdepth 1 -name '*.sql' | wc -l)"
@@ -88,22 +72,3 @@ jobs:
         run: pnpm lint
       - name: Production builds (without deployment)
         run: pnpm build
-      - name: Save generated bootstrap files
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: forge-bootstrap
-          path: |
-            pnpm-lock.yaml
-            apps/api/drizzle/meta/0000_snapshot.json
-          if-no-files-found: warn
-      - name: Commit lockfile and Drizzle snapshot to the feature branch
-        if: success() && github.event_name == 'push' && github.ref != 'refs/heads/main'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml apps/api/drizzle/meta/0000_snapshot.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Add pnpm lockfile and Drizzle baseline snapshot"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-          fi

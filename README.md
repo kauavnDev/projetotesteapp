@@ -71,15 +71,13 @@ cp apps/mobile/.env.example apps/mobile/.env
 
 Ajuste DATABASE_URL, os dois segredos JWT, ADMIN_EMAILS, CORS_ORIGINS, NEXT_PUBLIC_API_URL e EXPO_PUBLIC_API_URL. Em aparelho Android físico, localhost não aponta para o computador; use o endereço público encaminhado do Codespaces ou o IP LAN do computador. Os arquivos reais .env são ignorados pelo Git.
 
-O lockfile ainda está sendo bootstrapado pela integração contínua. Até ele ser adicionado ao repositório, use:
+O arquivo pnpm-lock.yaml está versionado. Instale de forma reproduzível:
 
 ~~~bash
 corepack enable
 corepack prepare pnpm@9.12.3 --activate
-pnpm install --no-frozen-lockfile
+pnpm install --frozen-lockfile
 ~~~
-
-Depois que pnpm-lock.yaml for versionado, prefira pnpm install --frozen-lockfile.
 
 ## Desenvolvimento
 
@@ -103,7 +101,7 @@ A migração baseline ativa está em apps/api/drizzle/0000_forge_baseline.sql, r
 pnpm db:migrate
 ~~~
 
-O comando db:generate ainda requer a geração/validação do snapshot inicial do Drizzle. Não gere novas migrações até esse snapshot estar versionado e revisado. Para qualquer banco já existente, faça backup e confira __drizzle_migrations antes de aplicar alterações; não rode o SQL manualmente e depois pelo Drizzle.
+O snapshot inicial do Drizzle está versionado em apps/api/drizzle/meta/0000_snapshot.json. A CI executa drizzle-kit generate para detectar drift e falha se uma alteração de schema gerar uma migração não revisada. Para novas mudanças, use pnpm db:generate, revise o SQL, o snapshot e o journal e versione todos juntos. Em banco existente, faça backup e confira __drizzle_migrations antes de aplicar; não rode o SQL manualmente e depois pelo Drizzle.
 
 ## Funcionalidades presentes no código
 
@@ -140,7 +138,7 @@ pnpm build
 pnpm db:migrate
 ~~~
 
-A CI executa testes estáticos, migração PostgreSQL, testes Vitest (incluindo integração de esquema quando DATABASE_URL existe), typecheck e builds. Isso não substitui testes de aparelho físico nem valida integração com provedor de IA ou armazenamento de produção.
+Na execução de 17/11/2026, a CI passou: 7 testes Node de contrato, 11 verificações estáticas, 13 testes Vitest (incluindo integração real com PostgreSQL 16), migração baseline, typecheck de todos os workspaces e builds da API e do painel Next.js. O build nativo Expo/APK não faz parte dessa validação. Isso não substitui testes no Android físico nem valida provedor de IA ou armazenamento de produção.
 
 ## Segurança e deploy
 

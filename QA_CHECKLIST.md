@@ -1,5 +1,17 @@
 # Checklist de QA do Forge
 
+## Validação automatizada concluída em 17/11/2026
+
+- [x] pnpm install com lockfile versionado.
+- [x] 7 testes Node de contrato passaram.
+- [x] 11 verificações estáticas passaram.
+- [x] Snapshot Drizzle gerado e drift check sem migração adicional.
+- [x] Migração baseline aplicada em PostgreSQL 16 limpo.
+- [x] 13 testes Vitest passaram, incluindo integração de unicidade diária.
+- [x] TypeScript passou nos workspaces.
+- [x] Build esbuild da API e build Next.js do painel passaram.
+- [ ] Build nativo Expo/APK e teste em Android físico.
+
 ## Automação e ambiente
 
 - [ ] Dev Container abre no GitHub Codespaces usando somente o navegador Android.
