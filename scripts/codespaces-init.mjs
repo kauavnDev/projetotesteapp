@@ -21,7 +21,7 @@ async function writeIfMissing(relativePath,content){
  return true;
 }
 
-const admins=process.env.FORGE_ADMIN_EMAILS??"admin1@example.com,admin2@example.com";
+const admins=process.env.FORGE_ADMIN_EMAILS??"admin1@example.invalid,admin2@example.invalid";
 const apiEnv=[
  "DATABASE_URL=postgres://forge:forge_local_only@db:5432/forge",
  `JWT_ACCESS_SECRET=${randomBytes(48).toString("base64url")}`,
