@@ -3,7 +3,7 @@ import {View,Text,Pressable,ScrollView,StyleSheet,RefreshControl,Animated} from 
 import {router} from "expo-router";
 import {api} from "../lib/api";
 import {useAuth} from "../store/auth";
-export default function Home(){const user=useAuth(s=>s.user),refreshToken=useAuth(s=>s.refreshToken),clear=useAuth(s=>s.clear);const [quote,setQuote]=useState<any>(null),[habits,setHabits]=useState<any[]>([]),[rank,setRank]=useState<any[]>([]),[refreshing,setRefreshing]=useState(false);
+export default function Home(){const quoteOpacity=useRef(new Animated.Value(1)).current;const user=useAuth(s=>s.user),refreshToken=useAuth(s=>s.refreshToken),clear=useAuth(s=>s.clear);const [quote,setQuote]=useState<any>(null),[habits,setHabits]=useState<any[]>([]),[rank,setRank]=useState<any[]>([]),[refreshing,setRefreshing]=useState(false);
  async function load(){try{const [q,h,r]=await Promise.all([api("/quotes/today"),api("/habits"),api("/leaderboard")]);setQuote(q);setHabits(h);setRank(r)}catch{}}
  useEffect(()=>{load()},[]);
  useEffect(()=>{quoteOpacity.stopAnimation();if(quote?.animation==="pulse"){const loop=Animated.loop(Animated.sequence([Animated.timing(quoteOpacity,{toValue:0.55,duration:850,useNativeDriver:true}),Animated.timing(quoteOpacity,{toValue:1,duration:850,useNativeDriver:true})]));loop.start();return()=>loop.stop()}if(quote?.animation==="fade"){quoteOpacity.setValue(0);Animated.timing(quoteOpacity,{toValue:1,duration:650,useNativeDriver:true}).start()}else quoteOpacity.setValue(1)},[quote?.animation]);

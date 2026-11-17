@@ -27,5 +27,8 @@
         "^build"
       ]
     }
-  }
+  },
+  "globalEnv": [
+    "DATABASE_URL"
+  ]
 }
