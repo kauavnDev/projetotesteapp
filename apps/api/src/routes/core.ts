@@ -180,9 +180,7 @@ coreRoutes.get("/leaderboard",async c=>{
  return c.json(rows.map((r,i)=>({...r,position:i+1})));
 });
 
- const rows=await db.select({id:users.id,name:users.name,points:sql<number>`coalesce(sum(${pointsLedger.points}),0)`}).from(users).leftJoin(pointsLedger,eq(users.id,pointsLedger.userId)).where(eq(users.active,true)).groupBy(users.id).orderBy(sql`coalesce(sum(${pointsLedger.points}),0) desc`).limit(100);
- return c.json(rows.map((r,i)=>({...r,position:i+1})));
-});
+
 const starterQuotes=[
  "Você não precisa vencer o ano hoje. Só precisa cumprir o próximo passo.",
  "Disciplina é escolher o que você quer mais, em vez do que quer agora.",
