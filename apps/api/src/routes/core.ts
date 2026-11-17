@@ -171,7 +171,7 @@ const starterQuotes=[
  "Hoje é uma nova oportunidade de fazer um pouco melhor."
 ];
 coreRoutes.get("/quotes/today",async c=>{
- let active=await db.select().from(quotes).where(eq(quotes.active,true)).orderBy(desc(quotes.createdAt));
+ let active=await db.select().from(quotes).where(eq(quotes.active,true)).orderBy(desc(quotes.createdAt),desc(quotes.id));
  if(!active.length){
   await db.transaction(async tx=>{
    await tx.execute(sql`select pg_advisory_xact_lock(9102026)`);
@@ -237,7 +237,8 @@ coreRoutes.get("/admin/metrics",adminOnly,async c=>{
  const [u]=await db.select({count:sql<number>`count(*)`}).from(users);
  const [h]=await db.select({count:sql<number>`count(*)`}).from(habits);
  const [s]=await db.select({total:sql<number>`coalesce(sum(case when type='deposit' then amount::numeric else -amount::numeric end),0)`}).from(savingsEntries);
- return c.json({users:Number(u.count),habits:Number(h.count),netSavings:Number(s.total)});
+ const [f]=await db.select({income:sql<number>`coalesce(sum(case when type='income' then amount::numeric else 0 end),0)`,expenses:sql<number>`coalesce(sum(case when type='expense' then amount::numeric else 0 end),0)`}).from(financeTransactions);
+ return c.json({users:Number(u.count),habits:Number(h.count),netSavings:Number(s.total),financeIncome:Number(f.income),financeExpenses:Number(f.expenses)});
 });
 coreRoutes.get("/admin/quotes",adminOnly,async c=>c.json(await db.select().from(quotes).orderBy(desc(quotes.createdAt))));
 coreRoutes.post("/admin/quotes",adminOnly,async c=>{const b=quoteSchema.parse(await c.req.json());const [r]=await db.insert(quotes).values(b).returning();return c.json(r,201);});
