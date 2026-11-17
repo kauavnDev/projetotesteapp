@@ -6,8 +6,8 @@
 - [x] 8 testes Node de contrato passaram.
 - [x] 11 verificações estáticas passaram.
 - [x] Snapshot Drizzle gerado e drift check sem migração adicional.
-- [x] Migrações 0000 e 0001 aplicadas em PostgreSQL 16 limpo.
-- [x] 22 testes Vitest passaram em 4 arquivos, incluindo CRUD/isolamento financeiro e seed de frases.
+- [x] Migrações 0000, 0001 e 0002 aplicadas em PostgreSQL 16 limpo.
+- [ ] 23 testes Vitest esperados após a inclusão dos testes de amizade; aguardando CI desta revisão.
 - [x] TypeScript passou nos workspaces.
 - [x] Build esbuild da API e build Next.js do painel passaram.
 - [ ] Build nativo Expo/APK e teste em Android físico.
@@ -65,11 +65,17 @@
 - [ ] Confirmar que a análise não estima medidas, percentual de gordura nem diagnóstico.
 - [ ] Política de retenção/exclusão de análises ligadas a fotos removidas.
 
+## Amigos e ranking privado
+
+- [ ] Convite por e-mail, aceite/recusa, cancelamento e remoção de amizade.
+- [ ] Ranking inclui apenas o próprio usuário e amigos aceitos; não expõe outros usuários.
+
 ## Mente e painel web
 
 - [ ] CRUD do diário e isolamento entre usuários.
 - [ ] Login web, refresh token e logout.
 - [ ] Painel usuário em celular/desktop.
+- [ ] Gestão de amizades no mobile e web.
 - [ ] Edição/exclusão web de hábitos, finanças, poupança, metas e diário.\n- [ ] Rotação diária das frases motivacionais e CRUD administrativo.
 - [ ] Timeline de fotos e alarmes na interface web.
 - [ ] Admin: allowlist de exatamente dois e-mails, CRUD de frases, usuários e métricas.
