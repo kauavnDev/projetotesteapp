@@ -95,7 +95,7 @@ A API carrega apps/api/.env quando iniciada pelo script do workspace. O Next.js 
 
 ## Banco e migrações
 
-As migrações estão em apps/api/drizzle/ e são registradas em apps/api/drizzle/meta/_journal.json. `0000_forge_baseline.sql` cria a estrutura inicial; `0001_finance_transactions.sql` adiciona o livro-razão de entradas e despesas. O Dev Container e a CI aplicam todas em PostgreSQL limpo.
+As migrações estão em apps/api/drizzle/ e são registradas em apps/api/drizzle/meta/_journal.json. `0000_forge_baseline.sql` cria a estrutura inicial; `0001_finance_transactions.sql` adiciona o livro-razão de entradas e despesas; `0002_friendships.sql` adiciona convites e conexões entre amigos. O Dev Container e a CI aplicam todas em PostgreSQL limpo.
 
 ~~~bash
 pnpm db:migrate
@@ -111,6 +111,7 @@ Os snapshots do Drizzle estão versionados em apps/api/drizzle/meta/ (0000 e 000
 - Finanças mensais com entradas, despesas, categorias, saldo, histórico editável e exclusão; cofrinho separado para depósitos/retiradas, pontos e metas.
 - Poupança com depósitos, retiradas com motivo detalhado, edição/exclusão, saldo e pontos (R$ 1 líquido = 1 ponto); alterações financeiras usam lock transacional por usuário.
 - Metas com valor-alvo, prazo e progresso baseado no saldo poupado.
+- Convites de amizade por e-mail, aceite/recusa e ranking restrito ao próprio usuário e às conexões aceitas; novos usuários não aparecem no ranking de terceiros.
 - Ranking, ledger de pontos e frase do dia.
 - Diário privado da mente com humor e reflexões editáveis.
 - Alarmes locais recorrentes e exceções por data; o app agenda os próximos 30 dias no dispositivo quando a tela de alarmes é aberta.
@@ -139,7 +140,7 @@ pnpm build
 pnpm db:migrate
 ~~~
 
-Na CI de 17/11/2026 (revisão de finanças), passaram 8 testes Node de contrato, 11 verificações estáticas e 22 testes Vitest em 4 arquivos. A execução também validou a ausência de drift Drizzle, aplicou as migrações 0000 e 0001 em PostgreSQL 16 limpo, executou typecheck nos workspaces e compilou a API e o painel Next.js. A cobertura inclui CRUD/isolamento das transações financeiras, resumo mensal, validação de período, biblioteca inicial de frases, alarmes, upload privado, exclusão de análises ligadas às fotos e consentimento de IA. O build nativo Expo/APK não faz parte dessa validação. Isso não substitui testes no Android físico nem valida o provedor de IA ou armazenamento de produção.
+Na CI de 17/11/2026 (revisão de finanças), passaram 8 testes Node de contrato, 11 verificações estáticas e 23 testes Vitest em 4 arquivos. A execução também validou a ausência de drift Drizzle, aplicou as migrações 0000 e 0001 em PostgreSQL 16 limpo, executou typecheck nos workspaces e compilou a API e o painel Next.js. A cobertura inclui CRUD/isolamento das transações financeiras, resumo mensal, validação de período, biblioteca inicial de frases, alarmes, upload privado, exclusão de análises ligadas às fotos e consentimento de IA. O build nativo Expo/APK não faz parte dessa validação. Isso não substitui testes no Android físico nem valida o provedor de IA ou armazenamento de produção.
 
 ## Segurança e deploy
 
