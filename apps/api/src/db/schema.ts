@@ -25,6 +25,16 @@ export const habitLogs = pgTable("habit_logs", {
   completed: boolean("completed").notNull().default(true), points: integer("points").notNull().default(10),
   createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
 }, t=>({dailyUnique: uniqueIndex("habit_logs_user_habit_day").on(t.userId,t.habitId,t.logDate)}));
+export const financeTransactions = pgTable("finance_transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  type: varchar("type",{length:10}).notNull(),
+  amount: numeric("amount",{precision:12,scale:2}).notNull(),
+  category: varchar("category",{length:40}).notNull(),
+  description: varchar("description",{length:240}),
+  occurredAt: date("occurred_at").notNull(),
+  createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+}, t=>({userDateIndex:index("finance_transactions_user_date_idx").on(t.userId,t.occurredAt)}));
 export const savingsEntries = pgTable("savings_entries", {
   id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
   type: varchar("type",{length:12}).notNull(), amount: numeric("amount",{precision:12,scale:2}).notNull(),
