@@ -101,7 +101,7 @@ As migrações estão em apps/api/drizzle/ e são registradas em apps/api/drizzl
 pnpm db:migrate
 ~~~
 
-Os snapshots do Drizzle estão versionados em apps/api/drizzle/meta/ (0000 e 0001). A CI executa drizzle-kit generate para detectar drift e falha se uma alteração de schema gerar uma migração não revisada. Para novas mudanças, use pnpm db:generate, revise o SQL, o snapshot e o journal e versione todos juntos. Em banco existente, faça backup e confira __drizzle_migrations antes de aplicar; não rode o SQL manualmente e depois pelo Drizzle.
+Os snapshots do Drizzle estão versionados em apps/api/drizzle/meta/ (0000, 0001 e 0002). A CI executa drizzle-kit generate para detectar drift e falha se uma alteração de schema gerar uma migração não revisada. Para novas mudanças, use pnpm db:generate, revise o SQL, o snapshot e o journal e versione todos juntos. Em banco existente, faça backup e confira __drizzle_migrations antes de aplicar; não rode o SQL manualmente e depois pelo Drizzle.
 
 ## Funcionalidades presentes no código
 
