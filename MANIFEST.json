@@ -1,6 +1,6 @@
 {
   "project": "Forge o seu amanhã",
-  "files": 63,
+  "files": 65,
   "generated": [
     ".devcontainer/devcontainer.json",
     ".devcontainer/docker-compose.yml",
@@ -34,7 +34,9 @@
     "apps/api/src/routes/auth.ts",
     "apps/api/src/routes/body.ts",
     "apps/api/src/routes/core.ts",
+    "apps/api/test/admin-allowlist.spec.ts",
     "apps/api/test/db.integration.spec.ts",
+    "apps/api/test/routes.integration.spec.ts",
     "apps/api/test/validation.spec.ts",
     "apps/api/tsconfig.json",
     "apps/mobile/.env.example",
