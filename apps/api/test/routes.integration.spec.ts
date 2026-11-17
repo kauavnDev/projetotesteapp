@@ -127,6 +127,34 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     expect((await afterDelete.json()).length).toBe(0);
   });
 
+  it("keeps finance transactions private and supports create, summary, edit and delete", async () => {
+    const month = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit" }).format(new Date());
+    const date = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+    const headers = { Authorization: `Bearer ${owner.accessToken}`, "Content-Type": "application/json" };
+    const income = await app.request("/v1/finance", { method: "POST", headers, body: JSON.stringify({ type: "income", amount: 3000, category: "Salário", occurredAt: date }) });
+    expect(income.status).toBe(201);
+    const expense = await app.request("/v1/finance", { method: "POST", headers, body: JSON.stringify({ type: "expense", amount: 100, category: "Alimentação", description: "Mercado", occurredAt: date }) });
+    expect(expense.status).toBe(201);
+    const expenseRow = await expense.json();
+    const summary = await app.request(`/v1/finance?month=${month}`, { headers });
+    const summaryBody = await summary.json();
+    expect(summaryBody.income).toBe(3000);
+    expect(summaryBody.expenses).toBe(100);
+    expect(summaryBody.balance).toBe(2900);
+    expect(summaryBody.categories).toEqual([{ category: "Alimentação", amount: 100 }]);
+    const strangerSummary = await app.request(`/v1/finance?month=${month}`, { headers: { Authorization: `Bearer ${stranger.accessToken}` } });
+    expect((await strangerSummary.json()).transactions).toHaveLength(0);
+    const edit = await app.request(`/v1/finance/${expenseRow.id}`, { method: "PATCH", headers, body: JSON.stringify({ amount: 125, description: "Compra atualizada" }) });
+    expect(edit.status).toBe(200);
+    const updated = await edit.json();
+    expect(Number(updated.amount)).toBe(125);
+    expect(updated.description).toBe("Compra atualizada");
+    const remove = await app.request(`/v1/finance/${expenseRow.id}`, { method: "DELETE", headers });
+    expect(remove.status).toBe(200);
+    const missing = await app.request(`/v1/finance/${expenseRow.id}`, { method: "DELETE", headers });
+    expect(missing.status).toBe(404);
+  });
+
   it("stores uploaded photos privately and enforces per-user access", async () => {
     const form = new FormData();
     form.set("view", "front");
