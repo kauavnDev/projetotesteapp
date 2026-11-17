@@ -4,17 +4,21 @@ export const emailSchema = z.string().email().max(254).transform(v => v.toLowerC
 export const passwordSchema = z.string().min(10).max(128);
 export const registerSchema = z.object({ name: z.string().trim().min(2).max(60), email: emailSchema, password: passwordSchema });
 export const loginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(128) });
-export const habitSchema = z.object({
+
+const habitObjectSchema = z.object({
   title: z.string().trim().min(2).max(80),
   frequency: z.enum(["daily","weekdays","weekends","custom"]).default("daily"),
   days: z.array(z.number().int().min(0).max(6)).max(7).default([]),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().default(null),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#E11D48")
-}).superRefine((value,ctx)=>{
+});
+export const habitSchema = habitObjectSchema;
+export const habitCreateSchema = habitObjectSchema.superRefine((value,ctx)=>{
   if(value.frequency==="custom"&&value.days.length===0){
     ctx.addIssue({code:"custom",path:["days"],message:"Selecione ao menos um dia para a frequência personalizada."});
   }
 });
+
 export const savingsSchema = z.object({
   type: z.enum(["deposit","withdrawal"]),
   amount: z.number().positive().max(1000000).refine(v=>Math.abs(v*100-Math.round(v*100))<1e-8,{message:"Informe no máximo duas casas decimais."}),
@@ -44,7 +48,7 @@ export const quoteSchema = z.object({
   author: z.string().trim().max(80).default("Forge")
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
-export type HabitInput = z.infer<typeof habitSchema>;
+export type HabitInput = z.infer<typeof habitCreateSchema>;
 export type SavingsInput = z.infer<typeof savingsSchema>;
 export type GoalInput = z.infer<typeof goalSchema>;
 export type QuoteInput = z.infer<typeof quoteSchema>;

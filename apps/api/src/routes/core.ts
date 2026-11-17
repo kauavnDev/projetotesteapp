@@ -3,12 +3,12 @@ import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { habits, habitLogs, savingsEntries, goals, pointsLedger, quotes, alarms, users, mindEntries } from "../db/schema.js";
 import { auth, adminOnly } from "../middleware/auth.js";
-import { habitSchema, savingsSchema, goalSchema, quoteSchema, alarmSchema, mindEntrySchema, calculateSavingsPoints, isHabitScheduledOnDate } from "@forge/shared";
+import { habitSchema, habitCreateSchema, savingsSchema, goalSchema, quoteSchema, alarmSchema, mindEntrySchema, calculateSavingsPoints, isHabitScheduledOnDate } from "@forge/shared";
 
 export const coreRoutes = new Hono();
 async function syncSavingsPoints(executor:any,userId:string) {
  const rows=await executor.select().from(savingsEntries).where(eq(savingsEntries.userId,userId));
- const balance=rows.reduce((sum,e)=>sum+(e.type==="deposit"?1:-1)*Number(e.amount),0);
+ const balance=rows.reduce((sum:number,e:any)=>sum+(e.type==="deposit"?1:-1)*Number(e.amount),0);
  await executor.delete(pointsLedger).where(and(eq(pointsLedger.userId,userId),eq(pointsLedger.source,"savings")));
  await executor.insert(pointsLedger).values({userId,source:"savings",sourceId:null,points:calculateSavingsPoints(balance)});
 }
@@ -32,7 +32,7 @@ coreRoutes.get("/habits",async c=>{
  }));
 });
 coreRoutes.post("/habits",async c=>{
- const b=habitSchema.parse(await c.req.json()); if(b.frequency==="custom"&&!b.days.length)return c.json({error:{code:"INVALID_DAYS",message:"Selecione ao menos um dia para a frequência personalizada."}},400); const [r]=await db.insert(habits).values({...b,userId:c.get("user").id}).returning(); return c.json(r,201);
+ const b=habitCreateSchema.parse(await c.req.json()); const [r]=await db.insert(habits).values({...b,userId:c.get("user").id}).returning(); return c.json(r,201);
 });
 coreRoutes.patch("/habits/:id",async c=>{
  const b=habitSchema.partial().parse(await c.req.json());
