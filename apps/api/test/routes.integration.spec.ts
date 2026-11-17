@@ -16,6 +16,11 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
   let owner: any;
   let stranger: any;
   let privateDir = "";
+  const originalSecrets = {
+    access: process.env.JWT_ACCESS_SECRET,
+    refresh: process.env.JWT_REFRESH_SECRET,
+    admins: process.env.ADMIN_EMAILS
+  };
   const userIds: string[] = [];
 
   async function register(label: string) {
@@ -35,6 +40,9 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
   }
 
   beforeAll(async () => {
+    process.env.JWT_ACCESS_SECRET = "forge-integration-access-secret-only-000000000000";
+    process.env.JWT_REFRESH_SECRET = "forge-integration-refresh-secret-only-000000000000";
+    process.env.ADMIN_EMAILS = "forge-admin-one@example.test,forge-admin-two@example.test";
     privateDir = await mkdtemp(join(tmpdir(), "forge-private-"));
     process.env.PRIVATE_UPLOAD_DIR = privateDir;
     const [dbModule, schema, authModule, coreModule, bodyModule] = await Promise.all([
@@ -59,6 +67,12 @@ describe.skipIf(!databaseUrl)("API route integration with PostgreSQL", () => {
     if (userIds.length && db && users) await db.delete(users).where(inArray(users.id, userIds));
     if (pool) await pool.end();
     if (privateDir) await rm(privateDir, { recursive: true, force: true });
+    if (originalSecrets.access === undefined) delete process.env.JWT_ACCESS_SECRET;
+    else process.env.JWT_ACCESS_SECRET = originalSecrets.access;
+    if (originalSecrets.refresh === undefined) delete process.env.JWT_REFRESH_SECRET;
+    else process.env.JWT_REFRESH_SECRET = originalSecrets.refresh;
+    if (originalSecrets.admins === undefined) delete process.env.ADMIN_EMAILS;
+    else process.env.ADMIN_EMAILS = originalSecrets.admins;
   });
 
   it("denies admin routes to an ordinary account", async () => {
