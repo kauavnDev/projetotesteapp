@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { habits, habitLogs, savingsEntries, goals, pointsLedger, quotes, alarms, users, mindEntries, financeTransactions } from "../db/schema.js";
+import { habits, habitLogs, savingsEntries, goals, pointsLedger, quotes, alarms, users, mindEntries, financeTransactions, friendships } from "../db/schema.js";
 import { auth, adminOnly } from "../middleware/auth.js";
-import { habitSchema, habitCreateSchema, savingsSchema, goalSchema, quoteSchema, alarmSchema, mindEntrySchema, calculateSavingsPoints, isHabitScheduledOnDate, financeTransactionSchema } from "@forge/shared";
+import { habitSchema, habitCreateSchema, savingsSchema, goalSchema, quoteSchema, alarmSchema, mindEntrySchema, calculateSavingsPoints, isHabitScheduledOnDate, financeTransactionSchema, friendInviteSchema, friendRequestActionSchema } from "@forge/shared";
 
 export const coreRoutes = new Hono();
 async function syncSavingsPoints(executor:any,userId:string) {
@@ -134,7 +134,52 @@ coreRoutes.post("/goals",async c=>{const b=goalSchema.parse(await c.req.json());
 coreRoutes.patch("/goals/:id",async c=>{const b=goalSchema.partial().parse(await c.req.json());if(!Object.keys(b).length)return c.json({error:{code:"EMPTY_UPDATE",message:"Informe ao menos um campo."}},400);const [r]=await db.update(goals).set({...b,targetAmount:b.targetAmount?.toFixed(2)}).where(and(eq(goals.id,c.req.param("id")),eq(goals.userId,c.get("user").id))).returning();return r?c.json(r):c.json({error:{code:"NOT_FOUND",message:"Meta não encontrada."}},404);});
 coreRoutes.delete("/goals/:id",async c=>{await db.delete(goals).where(and(eq(goals.id,c.req.param("id")),eq(goals.userId,c.get("user").id)));return c.json({ok:true});});
 
+coreRoutes.get("/friends",async c=>{
+ const uid=c.get("user").id;
+ const [outgoing,incoming]=await Promise.all([
+  db.select({requestId:friendships.id,friendId:users.id,name:users.name,status:friendships.status,createdAt:friendships.createdAt}).from(friendships).innerJoin(users,eq(friendships.addresseeId,users.id)).where(eq(friendships.requesterId,uid)),
+  db.select({requestId:friendships.id,friendId:users.id,name:users.name,status:friendships.status,createdAt:friendships.createdAt}).from(friendships).innerJoin(users,eq(friendships.requesterId,users.id)).where(eq(friendships.addresseeId,uid))
+ ]);
+ return c.json({friends:[...outgoing,...incoming].filter(x=>x.status==="accepted").map(x=>({id:x.friendId,name:x.name,requestId:x.requestId})),incoming:incoming.filter(x=>x.status==="pending"),outgoing:outgoing.filter(x=>x.status==="pending")});
+});
+coreRoutes.post("/friends/invite",async c=>{
+ const b=friendInviteSchema.parse(await c.req.json()),uid=c.get("user").id;
+ const [target]=await db.select({id:users.id,active:users.active}).from(users).where(eq(users.email,b.email)).limit(1);
+ if(!target||!target.active)return c.json({error:{code:"FRIEND_NOT_FOUND",message:"Conta não encontrada. Peça para a pessoa criar uma conta no Forge primeiro."}},404);
+ if(target.id===uid)return c.json({error:{code:"SELF_INVITE",message:"Você não pode adicionar sua própria conta."}},400);
+ const pair=[uid,target.id].sort().join(":");
+ const result=await db.transaction(async tx=>{
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${pair}))`);
+  const [existing]=await tx.select().from(friendships).where(or(and(eq(friendships.requesterId,uid),eq(friendships.addresseeId,target.id)),and(eq(friendships.requesterId,target.id),eq(friendships.addresseeId,uid)))).limit(1);
+  if(existing)return {kind:existing.status==="accepted"?"friends":"pending"} as const;
+  const [row]=await tx.insert(friendships).values({requesterId:uid,addresseeId:target.id,status:"pending"}).returning();
+  return {kind:"created",id:row.id} as const;
+ });
+ if(result.kind==="friends")return c.json({error:{code:"ALREADY_FRIENDS",message:"Vocês já estão conectados."}},409);
+ if(result.kind==="pending")return c.json({error:{code:"REQUEST_EXISTS",message:"Já existe uma solicitação pendente entre vocês."}},409);
+ return c.json({ok:true,requestId:result.id},201);
+});
+coreRoutes.patch("/friends/requests/:id",async c=>{
+ const b=friendRequestActionSchema.parse(await c.req.json()),uid=c.get("user").id;
+ const [request]=await db.select().from(friendships).where(and(eq(friendships.id,c.req.param("id")),eq(friendships.addresseeId,uid),eq(friendships.status,"pending"))).limit(1);
+ if(!request)return c.json({error:{code:"NOT_FOUND",message:"Solicitação não encontrada."}},404);
+ if(b.action==="accept"){const [updated]=await db.update(friendships).set({status:"accepted"}).where(eq(friendships.id,request.id)).returning();return c.json({ok:true,status:updated.status});}
+ await db.delete(friendships).where(eq(friendships.id,request.id));return c.json({ok:true,status:"declined"});
+});
+coreRoutes.delete("/friends/:id",async c=>{
+ const uid=c.get("user").id;
+ const [removed]=await db.delete(friendships).where(and(eq(friendships.id,c.req.param("id")),or(eq(friendships.requesterId,uid),eq(friendships.addresseeId,uid)))).returning({id:friendships.id});
+ return removed?c.json({ok:true}):c.json({error:{code:"NOT_FOUND",message:"Conexão não encontrada."}},404);
+});
+
 coreRoutes.get("/leaderboard",async c=>{
+ const uid=c.get("user").id;
+ const relations=await db.select({requesterId:friendships.requesterId,addresseeId:friendships.addresseeId}).from(friendships).where(and(eq(friendships.status,"accepted"),or(eq(friendships.requesterId,uid),eq(friendships.addresseeId,uid))));
+ const friendIds=[uid,...relations.map(r=>r.requesterId===uid?r.addresseeId:r.requesterId)];
+ const rows=await db.select({id:users.id,name:users.name,points:sql<number>`coalesce(sum(${pointsLedger.points}),0)`}).from(users).leftJoin(pointsLedger,eq(users.id,pointsLedger.userId)).where(and(eq(users.active,true),inArray(users.id,friendIds))).groupBy(users.id).orderBy(sql`coalesce(sum(${pointsLedger.points}),0) desc`).limit(100);
+ return c.json(rows.map((r,i)=>({...r,position:i+1})));
+});
+
  const rows=await db.select({id:users.id,name:users.name,points:sql<number>`coalesce(sum(${pointsLedger.points}),0)`}).from(users).leftJoin(pointsLedger,eq(users.id,pointsLedger.userId)).where(eq(users.active,true)).groupBy(users.id).orderBy(sql`coalesce(sum(${pointsLedger.points}),0) desc`).limit(100);
  return c.json(rows.map((r,i)=>({...r,position:i+1})));
 });
