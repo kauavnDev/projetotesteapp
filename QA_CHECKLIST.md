@@ -3,7 +3,7 @@
 ## Validação automatizada concluída em 17/11/2026
 
 - [x] pnpm install com lockfile versionado.
-- [x] 7 testes Node de contrato passaram.
+- [x] 8 testes Node de contrato passaram.
 - [x] 11 verificações estáticas passaram.
 - [x] Snapshot Drizzle gerado e drift check sem migração adicional.
 - [x] Migrações 0000 e 0001 aplicadas em PostgreSQL 16 limpo.
