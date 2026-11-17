@@ -1,6 +1,7 @@
 import { describe,it,expect } from "vitest";
-import { savingsSchema, habitSchema, habitCreateSchema, registerSchema, alarmSchema, mindEntrySchema, calculateSavingsPoints, isHabitScheduledOnDate } from "@forge/shared";
+import { savingsSchema, financeTransactionSchema, habitSchema, habitCreateSchema, registerSchema, alarmSchema, mindEntrySchema, calculateSavingsPoints, isHabitScheduledOnDate } from "@forge/shared";
 describe("shared validation and business rules",()=>{
+ it("validates income and expense transaction data",()=>{expect(financeTransactionSchema.parse({type:"expense",amount:12.5,category:"Alimentação",occurredAt:"2026-11-17"}).amount).toBe(12.5);expect(()=>financeTransactionSchema.parse({type:"transfer",amount:12,category:"X",occurredAt:"2026-11-17"})).toThrow();expect(()=>financeTransactionSchema.parse({type:"income",amount:1.001,category:"Salário",occurredAt:"2026-11-17"})).toThrow();});
  it("rejects withdrawal without detailed reason",()=>expect(()=>savingsSchema.parse({type:"withdrawal",amount:10})).toThrow());
  it("accepts detailed withdrawal",()=>expect(savingsSchema.parse({type:"withdrawal",amount:10,reason:"Conta de emergência"}).type).toBe("withdrawal"));
  it("accepts cent-level savings amounts",()=>expect(savingsSchema.parse({type:"deposit",amount:0.5}).amount).toBe(0.5));
