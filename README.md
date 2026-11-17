@@ -139,7 +139,7 @@ pnpm build
 pnpm db:migrate
 ~~~
 
-Na execução anterior de 17/11/2026, a CI passou: 8 testes Node de contrato, 11 verificações estáticas, 19 testes Vitest (regras de negócio, allowlist administrativa, migrações PostgreSQL e integração de rotas para alarmes, upload privado, isolamento por usuário e consentimento da análise), migração baseline, typecheck de todos os workspaces e builds da API e do painel Next.js. O build nativo Expo/APK não faz parte dessa validação. A nova funcionalidade de finanças adiciona testes de validação e integração; aguarde a CI desta revisão antes de considerar esses testes aprovados. Isso não substitui testes no Android físico nem valida o provedor de IA ou armazenamento de produção.
+Na CI de 17/11/2026 (revisão de finanças), passaram 8 testes Node de contrato, 11 verificações estáticas e 22 testes Vitest em 4 arquivos. A execução também validou a ausência de drift Drizzle, aplicou as migrações 0000 e 0001 em PostgreSQL 16 limpo, executou typecheck nos workspaces e compilou a API e o painel Next.js. A cobertura inclui CRUD/isolamento das transações financeiras, resumo mensal, validação de período, biblioteca inicial de frases, alarmes, upload privado, exclusão de análises ligadas às fotos e consentimento de IA. O build nativo Expo/APK não faz parte dessa validação. Isso não substitui testes no Android físico nem valida o provedor de IA ou armazenamento de produção.
 
 ## Segurança e deploy
 
