@@ -22,6 +22,13 @@
       "when": 1795006800000,
       "tag": "0002_friendships",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795093200000,
+      "tag": "0003_motivation_preference",
+      "breakpoints": true
     }
   ]
 }
