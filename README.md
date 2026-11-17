@@ -95,13 +95,13 @@ A API carrega apps/api/.env quando iniciada pelo script do workspace. O Next.js 
 
 ## Banco e migrações
 
-A migração baseline ativa está em apps/api/drizzle/0000_forge_baseline.sql, registrada em apps/api/drizzle/meta/_journal.json. O Dev Container e a CI aplicam essa migração em PostgreSQL limpo.
+As migrações estão em apps/api/drizzle/ e são registradas em apps/api/drizzle/meta/_journal.json. `0000_forge_baseline.sql` cria a estrutura inicial; `0001_finance_transactions.sql` adiciona o livro-razão de entradas e despesas. O Dev Container e a CI aplicam todas em PostgreSQL limpo.
 
 ~~~bash
 pnpm db:migrate
 ~~~
 
-O snapshot inicial do Drizzle está versionado em apps/api/drizzle/meta/0000_snapshot.json. A CI executa drizzle-kit generate para detectar drift e falha se uma alteração de schema gerar uma migração não revisada. Para novas mudanças, use pnpm db:generate, revise o SQL, o snapshot e o journal e versione todos juntos. Em banco existente, faça backup e confira __drizzle_migrations antes de aplicar; não rode o SQL manualmente e depois pelo Drizzle.
+Os snapshots do Drizzle estão versionados em apps/api/drizzle/meta/ (0000 e 0001). A CI executa drizzle-kit generate para detectar drift e falha se uma alteração de schema gerar uma migração não revisada. Para novas mudanças, use pnpm db:generate, revise o SQL, o snapshot e o journal e versione todos juntos. Em banco existente, faça backup e confira __drizzle_migrations antes de aplicar; não rode o SQL manualmente e depois pelo Drizzle.
 
 ## Funcionalidades presentes no código
 
@@ -139,7 +139,7 @@ pnpm build
 pnpm db:migrate
 ~~~
 
-Na execução de 17/11/2026, a CI passou: 8 testes Node de contrato, 11 verificações estáticas, 19 testes Vitest (regras de negócio, allowlist administrativa, migrações PostgreSQL e integração de rotas para alarmes, upload privado, isolamento por usuário e consentimento da análise), migração baseline, typecheck de todos os workspaces e builds da API e do painel Next.js. O build nativo Expo/APK não faz parte dessa validação. Isso não substitui testes no Android físico nem valida o provedor de IA ou armazenamento de produção.
+Na execução anterior de 17/11/2026, a CI passou: 8 testes Node de contrato, 11 verificações estáticas, 19 testes Vitest (regras de negócio, allowlist administrativa, migrações PostgreSQL e integração de rotas para alarmes, upload privado, isolamento por usuário e consentimento da análise), migração baseline, typecheck de todos os workspaces e builds da API e do painel Next.js. O build nativo Expo/APK não faz parte dessa validação. A nova funcionalidade de finanças adiciona testes de validação e integração; aguarde a CI desta revisão antes de considerar esses testes aprovados. Isso não substitui testes no Android físico nem valida o provedor de IA ou armazenamento de produção.
 
 ## Segurança e deploy
 
