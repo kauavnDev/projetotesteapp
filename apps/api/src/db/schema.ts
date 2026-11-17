@@ -10,6 +10,7 @@ export const users = pgTable("users", {
   heightCm: integer("height_cm"),
   weightKg: numeric("weight_kg",{precision:5,scale:2}),
   active: boolean("active").notNull().default(true),
+  showMotivationOnOpen: boolean("show_motivation_on_open").notNull().default(true),
   createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
 });
 export const habits = pgTable("habits", {
