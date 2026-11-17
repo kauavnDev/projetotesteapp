@@ -21,7 +21,7 @@ async function writeIfMissing(relativePath,content){
  return true;
 }
 
-const admins=process.env.FORGE_ADMIN_EMAILS??"admin1@example.invalid,admin2@example.invalid";
+const admins=process.env.FORGE_ADMIN_EMAILS??"";
 const apiEnv=[
  "DATABASE_URL=postgres://forge:forge_local_only@db:5432/forge",
  `JWT_ACCESS_SECRET=${randomBytes(48).toString("base64url")}`,
@@ -44,6 +44,6 @@ await writeIfMissing("apps/mobile/.env",`EXPO_PUBLIC_API_URL=${apiUrl}\n`);
 console.log("\nConfiguração local do Forge preparada.");
 console.log(`API para o celular: ${apiUrl}`);
 console.log(`Painel web: ${adminOrigin}`);
-console.log("ATENÇÃO: apps/api/.env usa e-mails de exemplo por padrão. Substitua ADMIN_EMAILS pelos dois e-mails corretos antes de criar as contas.");
+console.log("ATENÇÃO: ADMIN_EMAILS começa vazio. Configure os dois e-mails autorizados em apps/api/.env antes de criar as contas administrativas.");
 console.log("Para conectar o Android, torne as portas 8787 e 8081 públicas apenas durante o teste; depois volte para Private. Use somente dados fictícios.");
 if(!codespace||!domain)console.log("Codespaces não detectado: ajuste EXPO_PUBLIC_API_URL e NEXT_PUBLIC_API_URL manualmente para o endereço real da API.");
