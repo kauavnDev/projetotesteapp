@@ -38,7 +38,8 @@
 ## Alarmes e notificações
 
 - [ ] Permissões Android, canal de notificação e lembrete com app fechado.
-- [ ] Recorrência diária/semanal e exceção de data substitui o horário base.
+- [ ] Recorrência diária/semanal e exceção de data substitui o horário base, inclusive quando move o lembrete para um dia fora da recorrência.
+- [ ] Exceção desativada suprime somente a ocorrência daquela data; alarme base desativado não agenda notificações.
 - [ ] Desativar/editar/excluir alarmes reprograma notificações.
 - [ ] Reabrir app após vários dias e renovar janela de 30 dias.
 - [ ] Confirmar limitações do Android para alarmes exatos e economia de bateria.
