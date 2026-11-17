@@ -65,3 +65,12 @@ export function isHabitScheduledOnDate(frequency:"daily"|"weekdays"|"weekends"|"
   const day=parsed.getUTCDay();
   return frequency==="daily"||(frequency==="weekdays"&&day>=1&&day<=5)||(frequency==="weekends"&&(day===0||day===6))||(frequency==="custom"&&days.includes(day));
 }
+
+export const financeTransactionSchema = z.object({
+  type: z.enum(["income","expense"]),
+  amount: z.number().positive().max(10000000).refine(v=>Math.abs(v*100-Math.round(v*100))<1e-8,{message:"Informe no máximo duas casas decimais."}),
+  category: z.string().trim().min(2).max(40),
+  description: z.string().trim().max(240).optional(),
+  occurredAt: z.string().date()
+});
+export type FinanceTransactionInput = z.infer<typeof financeTransactionSchema>;
