@@ -79,3 +79,11 @@ export const mindEntries = pgTable("mind_entries", {
   id: uuid("id").defaultRandom().primaryKey(), userId: uuid("user_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
   mood: integer("mood").notNull(), content: text("content").notNull(), createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
 }, t=>({userCreatedIndex:index("mind_entries_user_created_idx").on(t.userId,t.createdAt)}));
+
+export const friendships = pgTable("friendships", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  requesterId: uuid("requester_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  addresseeId: uuid("addressee_id").references(()=>users.id,{onDelete:"cascade"}).notNull(),
+  status: varchar("status",{length:12}).notNull().default("pending"),
+  createdAt: timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+}, t=>({pairUnique:uniqueIndex("friendships_pair_unique").on(t.requesterId,t.addresseeId),addresseeIndex:index("friendships_addressee_idx").on(t.addresseeId)}));
