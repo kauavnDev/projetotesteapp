@@ -74,3 +74,6 @@ export const financeTransactionSchema = z.object({
   occurredAt: z.string().date()
 });
 export type FinanceTransactionInput = z.infer<typeof financeTransactionSchema>;
+
+export const friendInviteSchema = z.object({ email: emailSchema });
+export const friendRequestActionSchema = z.object({ action: z.enum(["accept","decline"]) });
