@@ -140,7 +140,7 @@ pnpm build
 pnpm db:migrate
 ~~~
 
-Na CI de 17/11/2026 (revisão de finanças), passaram 8 testes Node de contrato, 11 verificações estáticas e 23 testes Vitest em 4 arquivos. A execução também validou a ausência de drift Drizzle, aplicou as migrações 0000 e 0001 em PostgreSQL 16 limpo, executou typecheck nos workspaces e compilou a API e o painel Next.js. A cobertura inclui CRUD/isolamento das transações financeiras, resumo mensal, validação de período, biblioteca inicial de frases, alarmes, upload privado, exclusão de análises ligadas às fotos e consentimento de IA. O build nativo Expo/APK não faz parte dessa validação. Isso não substitui testes no Android físico nem valida o provedor de IA ou armazenamento de produção.
+Na CI de 17/11/2026 (revisão de finanças), passaram 8 testes Node de contrato, 11 verificações estáticas e 23 testes Vitest em 4 arquivos. A execução também validou a ausência de drift Drizzle, aplicou as migrações 0000, 0001 e 0002 em PostgreSQL 16 limpo, executou typecheck nos workspaces e compilou a API e o painel Next.js. A cobertura inclui CRUD/isolamento das transações financeiras, resumo mensal, validação de período, convites/aceite de amizade e ranking privado, biblioteca inicial de frases, alarmes, upload privado, exclusão de análises ligadas às fotos e consentimento de IA. O build nativo Expo/APK não faz parte dessa validação. Isso não substitui testes no Android físico nem valida o provedor de IA ou armazenamento de produção.
 
 ## Segurança e deploy
 
